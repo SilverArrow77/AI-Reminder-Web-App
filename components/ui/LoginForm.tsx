@@ -92,14 +92,14 @@ export default function LoginForm() {
       {/* Auxiliary Account Options, routing to be implemented soon for this */}
       <div className="space-y-3 pt-1 text-center text-xs">
         <div>
-          <a href="#" className="text-gray-500 hover:text-black underline transition-colors">
+          <a href="/forgot-password" className="text-gray-500 hover:text-black underline transition-colors">
             Forgot password?
           </a>
         </div>
         
         <div className="text-gray-500">
           Don't have an account?{' '}
-          <a href="#" className="font-bold text-black hover:underline">
+          <a href="/signup" className="font-bold text-black hover:underline">
             Sign Up
           </a>
         </div>
