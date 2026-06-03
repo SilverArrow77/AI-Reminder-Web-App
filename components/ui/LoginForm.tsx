@@ -15,7 +15,12 @@ export default function LoginForm() {
     setIsLoading(true);
     try{
     //this part should deal with the API for authentication of user details. I am adding the console.log statement just as a check to see if the submit button works.
-     const response = await fetch('/api/auth/login', {
+    if(email == 'test@email.com' && password == 'pass123'){ //added for testing purposes
+      router.push('/lists');
+      router.refresh();
+      return;
+    }
+    const response = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
