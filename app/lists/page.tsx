@@ -4,10 +4,9 @@ import { Menu, ImageIcon, Mic, FilePlus, X, Loader2, Settings2, Paperclip, Check
 import Sidebar from '@/components/tasks/ListSidebar';
 import TaskCard from '@/components/tasks/TaskCard';
 import AiMenu from '@/components/tasks/AiMenu';
-import { useListsState } from './useListsStates'; // Import custom logic state hook
+import { useListsState } from './useListsStates'; // Double check file system naming parameters match
 
 const Lists = () => {
-  // This puts all useState login in one single constant
   const s = useListsState();
 
   return (
@@ -15,7 +14,19 @@ const Lists = () => {
       <input type="file" ref={s.fileInputRef} className="hidden" onChange={(e) => s.setSelectedFile(e.target.files?.[0] || null)} />
       <input type="file" accept="image/*" ref={s.imageInputRef} className="hidden" onChange={(e) => s.setSelectedFile(e.target.files?.[0] || null)} />
 
-      <Sidebar isOpen={s.isLeftSidebarOpen} setIsOpen={s.setIsLeftSidebarOpen} sidebarItems={s.sidebarItems} onSwitchList={s.handleSwitchList} onAddList={s.handleAddTaskList} />
+      <Sidebar 
+        isOpen={s.isLeftSidebarOpen} 
+        setIsOpen={s.setIsLeftSidebarOpen} 
+        sidebarItems={s.sidebarItems} 
+        onSwitchList={s.handleSwitchList} 
+        onAddList={s.handleAddTaskList} 
+        viewMode={s.viewMode}
+        setViewMode={s.setViewMode}
+        groupItems={s.groupItems}
+        setGroupItems={s.setGroupItems}
+        setActiveContext={s.setActiveContext}
+        isLoadingGroups={s.isLoadingGroups}
+      />
 
       <main className="flex-1 relative flex flex-col items-center px-8 pt-4 pb-12 overflow-hidden transition-all duration-300">
         <div className="absolute right-0 bottom-0 w-80 h-[80%] bg-[#FCECD7] rounded-l-full opacity-70 transform translate-x-10 pointer-events-none z-0" />
@@ -82,7 +93,7 @@ const Lists = () => {
         </div>
       </main>
 
-      {/* This part is for the task editing part */}
+      {/* Task Configuration Modal Aside drawer */}
       {s.editingTask && (
         <aside className="fixed top-0 right-0 h-full w-85 bg-white border-l border-gray-200 flex flex-col p-6 shadow-2xl z-50">
           <div className="flex items-center justify-between mb-6 border-b border-gray-100 pb-4">
