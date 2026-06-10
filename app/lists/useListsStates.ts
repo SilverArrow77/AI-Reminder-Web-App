@@ -1,16 +1,27 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 
-type SidebarItem = { id: number; label: string; active: boolean; };
-type Task = { id: number; title: string; currentProgress: number; totalProgress: number; unit: string; date: string; time: string; reminderOffset?: string; };
+type SidebarItem = {
+  id: string | number;
+  label: string;
+  active: boolean;
+};
 
-type MemberItem = { id: string; name: string; };
-type GroupItem = { id: number; name: string; members: MemberItem[]; active: boolean; isExpanded?: boolean; };
+type Task = {
+  id: number;
+  title: string;
+  currentProgress: number;
+  totalProgress: number;
+  unit: string;
+  date: string;
+  time: string;
+  reminderOffset?: string;
+};
 
 export const useListsState = () => {
   const [greeting, setGreeting] = useState("Good morning");
   const [currentDate, setCurrentDate] = useState("");
-  
+
   const [isAiOpen, setIsAiOpen] = useState(false);
   const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(true);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -19,17 +30,15 @@ export const useListsState = () => {
   const [viewMode, setViewMode] = useState<'personal' | 'group'>('personal');
 
   const [sidebarItems, setSidebarItems] = useState<SidebarItem[]>([
-    { id: 1, label: 'Daily Task Lists', active: true },
+    { id: 'daily-list', label: 'Daily Task Lists', active: true },
     { id: 2, label: 'Simple Design System', active: false },
     { id: 3, label: 'Figma variable planning', active: false },
+    { id: 4, label: 'OKCLH token algorithm', active: false },
+    { id: 5, label: 'Component naming advice', active: false },
   ]);
 
-  // Dynamic Group Array
-  const [groupItems, setGroupItems] = useState<GroupItem[]>([]);
-  const [isLoadingGroups, setIsLoadingGroups] = useState(false);
-
-  // Combined Active context display tracker
-  const [activeContext, setActiveContext] = useState({ id: 1, name: "Daily Task Lists", type: "personal" });
+  const activeListId = sidebarItems.find(item => item.active)?.id || 'daily-list';
+  const activeListName = sidebarItems.find(item => item.active)?.label || "Task Lists";
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [newTaskTitle, setNewTaskTitle] = useState("");
@@ -59,31 +68,22 @@ export const useListsState = () => {
     setCurrentDate(today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }));
   }, []);
 
-  const fetchGroups = async () => {
-    try {
-      setIsLoadingGroups(true);
-      const response = await fetch('/api/groups');
-      if (!response.ok) throw new Error('Failed to fetch groups info.');
-      const data = await response.json();
-      setGroupItems(data);
-    } catch (err) {
-      console.error("Error loading groups:", err);
-      // Debug Fallback Simulator layout
-      setGroupItems([
-        { id: 10, name: 'Designer Dev Sprint', members: [{ id: 'm1', name: 'Anshul (You)' }, { id: 'm2', name: 'Flippy' }, { id: 'm3', name: 'Sarah' }], active: false, isExpanded: true },
-        { id: 11, name: 'OKCLH Core Team', members: [{ id: 'm1', name: 'Anshul (You)' }, { id: 'm4', name: 'Alex' }, { id: 'm5', name: 'David' }], active: false, isExpanded: false },
-      ]);
-    } finally {
-      setIsLoadingGroups(false);
-    }
-  };
+  useEffect(() => {
+    fetchTasksForList(activeListId);
+  }, [activeListId]);
 
-  const fetchTasks = async (targetId: number | string, type: string) => {
+  const fetchTasksForList = async (listId: string | number) => {
     try {
+      console.log('FETCHING LIST:', listId);
+
       setIsLoadingTasks(true);
-      const response = await fetch(`/api/lists/${targetId}?type=${type}`);
-      if (!response.ok) throw new Error('Failed to load tasks.');
+
+      const response = await fetch(`/api/lists/${listId}`);
+
       const data = await response.json();
+
+      console.log('DATA:', data);
+
       setTasks(data);
     } catch (error) {
       console.error(error);
@@ -118,7 +118,7 @@ export const useListsState = () => {
     setActiveContext({ id: mockId, name: listName.trim(), type: 'personal' });
   };
 
-  const handleSwitchList = (id: number) => {
+  const handleSwitchList = (id: string | number) => {
     setSidebarItems(prevItems => prevItems.map(item => ({ ...item, active: item.id === id })));
     const targetName = sidebarItems.find(item => item.id === id)?.label || "Personal List";
     setActiveContext({ id, name: targetName, type: 'personal' });
@@ -144,7 +144,62 @@ export const useListsState = () => {
     }
   };
 
-  // ADDED ALL MISSING PROPERTIES TO THE RETURN BLOCK HERE
+  const handleCreateTask = async (
+  e: React.KeyboardEvent<HTMLTextAreaElement> | React.MouseEvent
+) => {
+  if ('key' in e && e.key === 'Enter' && e.shiftKey) return;
+  if ('key' in e && e.key === 'Enter') e.preventDefault();
+  if (!newTaskTitle.trim() || isSubmittingTask) return;
+
+  try {
+    setIsSubmittingTask(true);
+
+    const response = await fetch('/api/tasks', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        title: newTaskTitle.trim(),
+        listId: activeListId,
+      }),
+    });
+
+    const task = await response.json();
+
+    if (!response.ok) {
+      throw new Error(task.error || 'Failed to create task');
+    }
+
+    const newTask: Task = {
+      id: Date.now(),
+      title: task.title,
+      currentProgress: 0,
+      totalProgress: 1,
+      unit: '',
+      date: 'Today',
+      time: 'Just now',
+    };
+
+    setTasks((prevTasks) => [...prevTasks, newTask]);
+
+    setNewTaskTitle('');
+    setSelectedFile(null);
+    setAudioBlob(null);
+  } catch (error) {
+    console.error(error);
+    alert('Failed to create task');
+  } finally {
+    setIsSubmittingTask(false);
+  }
+};
+
+  const handleSaveTaskEdits = () => {
+    if (!editingTask) return;
+    setTasks(prev => prev.map(t => t.id === editingTask.id ? editingTask : t));
+    setEditingTask(null);
+  };
+
   return {
     greeting, currentDate, isAiOpen, setIsAiOpen, isLeftSidebarOpen, setIsLeftSidebarOpen,
     editingTask, setEditingTask, sidebarItems, tasks, viewMode, setViewMode, groupItems, setGroupItems,

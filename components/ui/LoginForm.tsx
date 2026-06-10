@@ -7,44 +7,41 @@ export default function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    try{
-    //this part should deal with the API for authentication of user details. I am adding the console.log statement just as a check to see if the submit button works.
-    if(email == 'test@email.com' && password == 'pass123'){ //added for testing purposes
-      router.push('/lists');
-      router.refresh();
-      return;
-    }
-    const response = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    })
 
-    if (response.ok) {
-      // We are using JWT Authentication here. The backend is supposed to handle this code and send a response
-      // after logging in, the user should go to the lists page, where the user can see their personal tasks
-      router.push('/lists');
-      router.refresh();
-    } else {
-      alert("Invalid credentials");
-    }
-  }
-  catch(error){
-    console.error("Authentication error:", error);
-    alert("Something went wrong here. Please try again");
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          password,
+        }),
+      });
 
-  }
-    //console.log({ email, password });
-  finally{
-    setIsLoading(false);
-  }
-    
+      const data = await response.json();
+
+      if (response.ok) {
+        localStorage.setItem('token', data.token);
+
+        router.push('/lists');
+        router.refresh();
+      } else {
+        alert(data.error || 'Invalid credentials');
+      }
+    } catch (error) {
+      console.error('Authentication error:', error);
+      alert('Something went wrong. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -101,7 +98,7 @@ export default function LoginForm() {
             Forgot password?
           </a>
         </div>
-        
+
         <div className="text-gray-500">
           Don't have an account?{' '}
           <a href="/signup" className="font-bold text-black hover:underline">
