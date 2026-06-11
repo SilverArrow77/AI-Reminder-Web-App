@@ -17,7 +17,7 @@ export async function POST(req: Request) {
     const task = await prisma.task.create({
       data: {
         title,
-        listId,
+        listId: String(listId),
       },
     })
 

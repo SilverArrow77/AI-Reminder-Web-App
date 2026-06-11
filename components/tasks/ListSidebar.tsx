@@ -54,14 +54,14 @@ const Sidebar: React.FC<SidebarProps> = ({
     ));
   };
 
-  // Switch context workspace cleanly to the targeted group row index
+  // Switch to the targeted group row index
   const handleSelectGroup = (group: GroupItem) => {
     setGroupItems(prev => prev.map(g => ({ ...g, active: g.id === group.id })));
     // Switch task viewer context over to group container parameters
     setActiveContext({ id: group.id, name: `${group.name} (Shared Desk)`, type: 'group' });
   };
 
-  // Switch workspace cleanly to individual members inside an accordion branch
+  // Switch  individual members inside an accordion branch
   const handleSelectMember = (member: MemberItem, groupName: string, e: React.MouseEvent) => {
     e.stopPropagation(); // Restrict container bubble interactions
     setActiveContext({ id: member.id, name: `${member.name}'s Tasks — ${groupName}`, type: 'member' });
@@ -96,55 +96,60 @@ const Sidebar: React.FC<SidebarProps> = ({
           </div>
 
           {/* NAVIGATION PORT CONTAINER */}
-          <div>
-            <h3 className="text-xs font-semibold text-gray-400 px-2 mb-2 uppercase tracking-wider">{viewMode === 'personal' ? 'Your Task Lists' : 'Your Groups'}</h3>
-            
-            <nav className="space-y-1 max-h-[50vh] overflow-y-auto pr-1">
-              {viewMode === 'personal' ? (
-                sidebarItems.map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => onSwitchList(item.id)}
-                    className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-colors ${item.active ? 'bg-white font-medium text-gray-900 shadow-sm' : 'text-gray-600 hover:bg-gray-200/50'}`}
-                  >
-                    {item.label}
-                  </button>
-                ))
-              ) : isLoadingGroups ? (
-                <div className="flex items-center gap-2 px-3 py-4 text-xs text-gray-400"><Loader2 size={14} className="animate-spin text-orange-500" /> Syncing channels...</div>
-              ) : (
-                groupItems.map((group) => (
-                  <div key={group.id} className="flex flex-col rounded-lg mb-1">
-                    <div 
-                      onClick={() => handleSelectGroup(group)}
-                      className={`w-full flex items-center justify-between px-3 py-2 text-sm cursor-pointer rounded-lg transition-colors ${group.active ? 'bg-white font-medium text-gray-900 shadow-sm' : 'text-gray-600 hover:bg-gray-200/50'}`}
-                    >
-                      <span className="truncate pr-2">{group.name}</span>
-                      <button onClick={(e) => toggleGroupExpand(group.id, e)} className="p-0.5 text-gray-400 hover:text-gray-700 hover:bg-gray-200 rounded transition">
-                        {group.isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                      </button>
-                    </div>
-
-                    {/* Expandable branch representing members */}
-                    {group.isExpanded && (
-                      <div className="ml-4 pl-3 border-l border-gray-200 my-1 space-y-1">
-                        {group.members.map((member) => (
-                          <div 
-                            key={member.id} 
-                            onClick={(e) => handleSelectMember(member, group.name, e)}
-                            className="text-xs text-gray-500 hover:text-gray-900 py-1 px-1.5 rounded cursor-pointer hover:bg-gray-200/40 transition flex items-center gap-1.5 font-medium"
-                          >
-                            <div className="w-1.5 h-1.5 rounded-full bg-gray-400" />
-                            <span className="truncate">{member.name}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))
-              )}
-            </nav>
+          {/* NAVIGATION PORT CONTAINER */}
+<div>
+  <h3 className="text-xs font-semibold text-gray-400 px-2 mb-2 uppercase tracking-wider">
+    {viewMode === 'personal' ? 'Your Task Lists' : 'Your Groups'}
+  </h3>
+  
+  <nav className="space-y-1 max-h-[50vh] overflow-y-auto pr-1">
+    {viewMode === 'personal' ? (
+      sidebarItems?.map((item) => (
+        <button
+          key={item.id}
+          onClick={() => onSwitchList(item.id)}
+          className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-colors ${item.active ? 'bg-white font-medium text-gray-900 shadow-sm' : 'text-gray-600 hover:bg-gray-200/50'}`}
+        >
+          {item.label}
+        </button>
+      )) || <div className="text-xs text-gray-400 px-3 py-2">No personal lists found.</div>
+    ) : isLoadingGroups ? (
+      <div className="flex items-center gap-2 px-3 py-4 text-xs text-gray-400">
+        <Loader2 size={14} className="animate-spin text-orange-500" /> Syncing channels...
+      </div>
+    ) : (
+      groupItems?.map((group) => (
+        <div key={group.id} className="flex flex-col rounded-lg mb-1">
+          <div 
+            onClick={() => handleSelectGroup(group)}
+            className={`w-full flex items-center justify-between px-3 py-2 text-sm cursor-pointer rounded-lg transition-colors ${group.active ? 'bg-white font-medium text-gray-900 shadow-sm' : 'text-gray-600 hover:bg-gray-200/50'}`}
+          >
+            <span className="truncate pr-2">{group.name}</span>
+            <button onClick={(e) => toggleGroupExpand(group.id, e)} className="p-0.5 text-gray-400 hover:text-gray-700 hover:bg-gray-200 rounded transition">
+              {group.isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+            </button>
           </div>
+
+          {/* Expandable branch representing members */}
+          {group.isExpanded && (
+            <div className="ml-4 pl-3 border-l border-gray-200 my-1 space-y-1">
+              {group.members?.map((member) => (
+                <div 
+                  key={member.id} 
+                  onClick={(e) => handleSelectMember(member, group.name, e)}
+                  className="text-xs text-gray-500 hover:text-gray-900 py-1 px-1.5 rounded cursor-pointer hover:bg-gray-200/40 transition flex items-center gap-1.5 font-medium"
+                >
+                  <div className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+                  <span className="truncate">{member.name}</span>
+                </div>
+              )) || <div className="text-[10px] text-gray-400 pl-1 py-1">No group members.</div>}
+            </div>
+          )}
+        </div>
+      )) || <div className="text-xs text-gray-400 px-3 py-2">No groups found.</div>
+    )}
+  </nav>
+</div>
         </div>
 
         <div className={`pt-4 border-t border-gray-200 px-2 ${isOpen ? "block" : "hidden"}`}>

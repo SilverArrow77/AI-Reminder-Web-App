@@ -7,6 +7,9 @@ type SidebarItem = {
   active: boolean;
 };
 
+type MemberItem = { id: string; name: string; };
+type GroupItem = { id: number; name: string; members: MemberItem[]; active: boolean; isExpanded?: boolean; };
+
 type Task = {
   id: number;
   title: string;
@@ -26,19 +29,31 @@ export const useListsState = () => {
   const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(true);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
 
-  // View Mode: 'personal' | 'group'
+  // Missing States Needed by Sidebar Component
   const [viewMode, setViewMode] = useState<'personal' | 'group'>('personal');
-
-  const [sidebarItems, setSidebarItems] = useState<SidebarItem[]>([
-    { id: 'daily-list', label: 'Daily Task Lists', active: true },
-    { id: 2, label: 'Simple Design System', active: false },
-    { id: 3, label: 'Figma variable planning', active: false },
-    { id: 4, label: 'OKCLH token algorithm', active: false },
-    { id: 5, label: 'Component naming advice', active: false },
+  const [isLoadingGroups, setIsLoadingGroups] = useState(false);
+  const [groupItems, setGroupItems] = useState<GroupItem[]>([
+    {
+      id: 1001,
+      name: "Intern Project Sync",
+      active: false,
+      isExpanded: false,
+      members: [
+        { id: "m1", name: "Anshul" },
+        { id: "m2", name: "Advitiya" }
+      ]
+    }
   ]);
+  const [activeContext, setActiveContext] = useState<{ id: any; name: string; type: string; }>({
+    id: 'daily-list',
+    name: 'Daily Task Lists',
+    type: 'personal'
+  });
 
-  const activeListId = sidebarItems.find(item => item.active)?.id || 'daily-list';
-  const activeListName = sidebarItems.find(item => item.active)?.label || "Task Lists";
+  const [sidebarItems, setSidebarItems] = useState<SidebarItem[]>([]);
+
+const activeListId = sidebarItems.find(item => item.active)?.id || '';
+const activeListName = sidebarItems.find(item => item.active)?.label || "Loading Lists...";
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [newTaskTitle, setNewTaskTitle] = useState("");
@@ -51,83 +66,76 @@ export const useListsState = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
 
-  // Fetch groups dynamically when viewMode switches to group
   useEffect(() => {
-    if (viewMode === 'group') {
-      fetchGroups();
-    }
-  }, [viewMode]);
+    const randomIndex = Math.floor(Math.random() * 10);
+    setGreeting(["Good morning", "Hello", "Welcome back", "Hi there", "Great to see you"][randomIndex % 5]);
 
-  // Sync tasks automatically when active context parameters shift
-  useEffect(() => {
-    fetchTasks(activeContext.id, activeContext.type);
-  }, [activeContext.id, activeContext.type]);
-
-  useEffect(() => {
     const today = new Date();
     setCurrentDate(today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }));
   }, []);
 
   useEffect(() => {
+  if (activeListId) {
     fetchTasksForList(activeListId);
-  }, [activeListId]);
+  }
+}, [activeListId]);
+
+// Fetch all available lists for the sidebar when the component mounts
+useEffect(() => {
+  const fetchAllLists = async () => {
+    try {
+      const response = await fetch('/api/lists');
+      const data = await response.json();
+      
+      if (Array.isArray(data) && data.length > 0) {
+        // Map over the database lists and set the first one as active
+        const mappedLists = data.map((list: any, index: number) => ({
+          id: list.id,
+          label: list.name,
+          active: index === 0 // Make the first list active by default
+        }));
+        setSidebarItems(mappedLists);
+      } else {
+        setSidebarItems([]);
+      }
+    } catch (error) {
+      console.error("Error fetching user lists:", error);
+      setSidebarItems([]);
+    }
+  };
+
+  fetchAllLists();
+}, []);
 
   const fetchTasksForList = async (listId: string | number) => {
     try {
       console.log('FETCHING LIST:', listId);
-
       setIsLoadingTasks(true);
-
       const response = await fetch(`/api/lists/${listId}`);
-
       const data = await response.json();
-
       console.log('DATA:', data);
-
-      setTasks(data);
+      
+      // Safety check: ensure array before setting state
+      setTasks(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error(error);
-      if (type === 'personal') {
-        setTasks([
-          { id: 101, title: 'Drink 2 Litres water', currentProgress: 0.6, totalProgress: 2, unit: 'L', date: '2026-06-08', time: '17:00' },
-          { id: 102, title: 'Iron clothes', currentProgress: 1, totalProgress: 5, unit: '', date: '2026-06-08', time: '21:00' }
-        ]);
-      } else if (type === 'group') {
-        setTasks([{ id: 501, title: 'Sync production Figma variables with Tailwind configurations', currentProgress: 0, totalProgress: 1, unit: '', date: '2026-06-10', time: '14:00' }]);
-      } else if (type === 'member') {
-        setTasks([{ id: 601, title: `Reviewing task items delegated to Member #${targetId}`, currentProgress: 1, totalProgress: 1, unit: '', date: '2026-06-09', time: '11:00' }]);
-      }
+      setTasks([]);
     } finally {
       setIsLoadingTasks(false);
     }
   };
 
-  const handleCreateTask = async (e: React.KeyboardEvent<HTMLTextAreaElement> | React.MouseEvent) => {
-    if (!newTaskTitle.trim() || isSubmittingTask) return;
-    const localFallbackTask: Task = { id: Date.now(), title: newTaskTitle.trim(), currentProgress: 0, totalProgress: 1, unit: '', date: 'Today', time: 'Just now' };
-    setTasks((prevTasks) => [...prevTasks, localFallbackTask]);
-    setNewTaskTitle(""); setSelectedFile(null); setAudioBlob(null);
-  };
-
   const handleAddTaskList = async (listName: string) => {
+    if (!listName || !listName.trim()) return;
     const mockId = Date.now();
     setSidebarItems(prev => {
       const resetItems = prev.map(item => ({ ...item, active: false }));
       return [...resetItems, { id: mockId, label: listName.trim(), active: true }];
     });
-    setActiveContext({ id: mockId, name: listName.trim(), type: 'personal' });
   };
 
   const handleSwitchList = (id: string | number) => {
     setSidebarItems(prevItems => prevItems.map(item => ({ ...item, active: item.id === id })));
-    const targetName = sidebarItems.find(item => item.id === id)?.label || "Personal List";
-    setActiveContext({ id, name: targetName, type: 'personal' });
-  };
-
-  const handleSaveTaskEdits = () => {
-    if (!editingTask) return;
-    setTasks(prev => prev.map(t => t.id === editingTask.id ? editingTask : t));
-    setEditingTask(null);
   };
 
   const toggleRecording = async () => {
@@ -144,55 +152,43 @@ export const useListsState = () => {
     }
   };
 
-  const handleCreateTask = async (
-  e: React.KeyboardEvent<HTMLTextAreaElement> | React.MouseEvent
-) => {
-  if ('key' in e && e.key === 'Enter' && e.shiftKey) return;
-  if ('key' in e && e.key === 'Enter') e.preventDefault();
-  if (!newTaskTitle.trim() || isSubmittingTask) return;
+  const handleCreateTask = async (e: React.KeyboardEvent<HTMLTextAreaElement> | React.MouseEvent) => {
+    if ('key' in e && e.key === 'Enter' && e.shiftKey) return;
+    if ('key' in e && e.key === 'Enter') e.preventDefault();
+    if (!newTaskTitle.trim() || isSubmittingTask) return;
 
-  try {
-    setIsSubmittingTask(true);
+    try {
+      setIsSubmittingTask(true);
+      const response = await fetch('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: newTaskTitle.trim(), listId: activeListId }),
+      });
 
-    const response = await fetch('/api/tasks', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        title: newTaskTitle.trim(),
-        listId: activeListId,
-      }),
-    });
+      const task = await response.json();
+      if (!response.ok) throw new Error(task.error || 'Failed to create task');
 
-    const task = await response.json();
+      const newTask: Task = {
+        id: Date.now(),
+        title: task.title,
+        currentProgress: 0,
+        totalProgress: 1,
+        unit: '',
+        date: 'Today',
+        time: 'Just now',
+      };
 
-    if (!response.ok) {
-      throw new Error(task.error || 'Failed to create task');
+      setTasks((prevTasks) => [...prevTasks, newTask]);
+      setNewTaskTitle('');
+      setSelectedFile(null);
+      setAudioBlob(null);
+    } catch (error) {
+      console.error(error);
+      alert('Failed to create task');
+    } finally {
+      setIsSubmittingTask(false);
     }
-
-    const newTask: Task = {
-      id: Date.now(),
-      title: task.title,
-      currentProgress: 0,
-      totalProgress: 1,
-      unit: '',
-      date: 'Today',
-      time: 'Just now',
-    };
-
-    setTasks((prevTasks) => [...prevTasks, newTask]);
-
-    setNewTaskTitle('');
-    setSelectedFile(null);
-    setAudioBlob(null);
-  } catch (error) {
-    console.error(error);
-    alert('Failed to create task');
-  } finally {
-    setIsSubmittingTask(false);
-  }
-};
+  };
 
   const handleSaveTaskEdits = () => {
     if (!editingTask) return;
@@ -200,11 +196,13 @@ export const useListsState = () => {
     setEditingTask(null);
   };
 
+  // Return everything required by Lists.tsx and Sidebar props mapping
   return {
     greeting, currentDate, isAiOpen, setIsAiOpen, isLeftSidebarOpen, setIsLeftSidebarOpen,
-    editingTask, setEditingTask, sidebarItems, tasks, viewMode, setViewMode, groupItems, setGroupItems,
-    activeListId: activeContext.id, activeListName: activeContext.name, isLoadingTasks, isSubmittingTask, 
-    fileInputRef, imageInputRef, selectedFile, setSelectedFile, isRecording, audioBlob, setAudioBlob,
-    handleAddTaskList, handleSwitchList, handleCreateTask, setActiveContext, isLoadingGroups, handleSaveTaskEdits,setNewTaskTitle,newTaskTitle,toggleRecording
+    editingTask, setEditingTask, sidebarItems, activeListId, activeListName, tasks,
+    newTaskTitle, setNewTaskTitle, isLoadingTasks, isSubmittingTask, fileInputRef,
+    imageInputRef, selectedFile, setSelectedFile, isRecording, audioBlob, setAudioBlob,
+    handleAddTaskList, handleSwitchList, toggleRecording, handleCreateTask, handleSaveTaskEdits,
+    viewMode, setViewMode, groupItems, setGroupItems, setActiveContext, isLoadingGroups
   };
 };
