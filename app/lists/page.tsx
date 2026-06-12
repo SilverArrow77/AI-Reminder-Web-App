@@ -1,12 +1,13 @@
 'use client';
 import React from 'react';
-import { Menu, ImageIcon, Mic, FilePlus, X, Loader2, Settings2, Paperclip, Check, Plus, ArrowBigRight} from 'lucide-react';
+import { Menu, ImageIcon, Mic, FilePlus, X, Loader2, Settings2, Paperclip, Check, ArrowBigRight} from 'lucide-react';
 import Sidebar from '@/components/tasks/ListSidebar';
 import TaskCard from '@/components/tasks/TaskCard';
 import AiMenu from '@/components/tasks/AiMenu';
 import { useListsState } from './useListsStates'; // Double check file system naming parameters match
 
 const Lists = () => {
+  // This puts all useState login in one single constant
   const s = useListsState();
 
   return (
@@ -58,7 +59,15 @@ const Lists = () => {
             ) : s.tasks.length === 0 ? (
               <p className="text-sm text-gray-400 py-12">No tasks in this list yet.</p>
             ) : (
-              s.tasks.map((task) => <TaskCard key={task.id} task={task} onEditTrigger={s.setEditingTask} />)
+              /* CONNECTED: Added onDeleteTrigger to wire the garbage logic down to TaskCard */
+              s.tasks.map((task) => (
+                <TaskCard 
+                  key={task.id} 
+                  task={task} 
+                  onEditTrigger={s.setEditingTask} 
+                  onDeleteTrigger={s.handleDeleteTask} 
+                />
+              ))
             )}
           </div>
 

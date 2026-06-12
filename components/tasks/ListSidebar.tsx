@@ -2,8 +2,8 @@
 import React, { useState } from 'react';
 import { Menu, Plus, Search, LogOut, X, FolderPlus, User, Users, ChevronDown, ChevronRight, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { SidebarItem } from '@/app/lists/useListsStates';
 
-type SidebarItem = { id: number; label: string; active: boolean; };
 type MemberItem = { id: string; name: string; };
 type GroupItem = { id: number; name: string; members: MemberItem[]; active: boolean; isExpanded?: boolean; };
 
@@ -11,7 +11,7 @@ type SidebarProps = {
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
   sidebarItems: SidebarItem[];
-  onSwitchList: (id: number) => void;
+  onSwitchList: (id: number | string) => void;
   onAddList: (listName: string) => void;
   // Expose additional explicit context parameters to handle non-personal objects
   viewMode: 'personal' | 'group';

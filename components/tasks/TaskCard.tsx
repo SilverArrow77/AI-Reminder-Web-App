@@ -1,6 +1,6 @@
 'use client';
-import React from 'react';
-import { Star, Bell, Settings2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { Star, Settings2, Trash2, Loader2 } from 'lucide-react';
 
 type Task = {
   id: number;
@@ -16,22 +16,58 @@ type Task = {
 type TaskCardProps = {
   task: Task;
   onEditTrigger: (task: Task) => void;
+  onDeleteTrigger: (taskId: number) => Promise<void>; // Added prop to handle backend deletion
 };
 
-const TaskCard: React.FC<TaskCardProps> = ({ task, onEditTrigger }) => {
+const TaskCard: React.FC<TaskCardProps> = ({ task, onEditTrigger, onDeleteTrigger }) => {
   const percentage = task.totalProgress > 0 ? (task.currentProgress / task.totalProgress) * 100 : 0;
+  const [isDeleting, setIsLoadingDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    if (window.confirm(`Are you sure you want to delete "${task.title}"?`)) {
+      try {
+        setIsLoadingDeleting(true);
+        await onDeleteTrigger(task.id);
+      } catch (error) {
+        console.error("Delete failed in card component context:", error);
+      } finally {
+        setIsLoadingDeleting(false);
+      }
+    }
+  };
 
   return (
-    <div className="bg-white border border-gray-300 rounded-2xl p-4 text-left shadow-sm">
+    <div className={`bg-white border border-gray-300 rounded-2xl p-4 text-left shadow-sm transition-opacity ${
+      isDeleting ? 'opacity-50 pointer-events-none' : ''
+    }`}>
       <div className="flex justify-between items-start mb-2">
         <span className="font-medium text-gray-800 text-sm">{task.title}</span>
-        <button 
-          onClick={() => onEditTrigger(task)}
-          className="text-gray-500 hover:text-gray-900 p-1 hover:bg-gray-100 rounded-lg transition"
-          title="Edit Task Settings"
-        >
-          <Settings2 size={16} />
-        </button>
+        
+        <div className="flex items-center gap-1">
+          {/* Settings/Edit Gear Button */}
+          <button 
+            onClick={() => onEditTrigger(task)}
+            className="text-gray-500 hover:text-gray-900 p-1 hover:bg-gray-100 rounded-lg transition"
+            title="Edit Task Settings"
+            disabled={isDeleting}
+          >
+            <Settings2 size={16} />
+          </button>
+
+          {/* NEW: Delete Trash Button with loading spinner fallback */}
+          <button 
+            onClick={handleDelete}
+            className="text-red-500 hover:text-red-700 p-1 hover:bg-red-50 rounded-lg transition"
+            title="Delete Task"
+            disabled={isDeleting}
+          >
+            {isDeleting ? (
+              <Loader2 size={16} className="animate-spin text-red-500" />
+            ) : (
+              <Trash2 size={16} />
+            )}
+          </button>
+        </div>
       </div>
 
       <div className="flex items-center justify-between text-xs text-gray-600 mb-2">
