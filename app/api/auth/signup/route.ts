@@ -39,6 +39,13 @@ export async function POST(req: Request) {
       },
     })
 
+    await prisma.list.create({
+      data: {
+        name: 'Daily Task Lists',
+        userId: user.id,
+      },
+    })
+
     return NextResponse.json(
       {
         message: 'User created successfully',
