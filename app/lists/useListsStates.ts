@@ -10,9 +10,11 @@ export type SidebarItem = {
 type MemberItem = { id: string; name: string; };
 type GroupItem = { id: number; name: string; members: MemberItem[]; active: boolean; isExpanded?: boolean; };
 
+// Inside your type definitions (useListsStates.ts / TaskCard.tsx)
 type Task = {
   id: number;
   title: string;
+  completed: boolean; // NEW: Track completion status
   currentProgress: number;
   totalProgress: number;
   unit: string;
@@ -140,6 +142,31 @@ export const useListsState = () => {
     }
   }, [activeContext.id, activeContext.type]);
 
+  const handleToggleComplete = async (taskId: number) => {
+  // Find the current task to invert its completion state
+  const targetTask = tasks.find(t => t.id === taskId);
+  if (!targetTask) return;
+
+  const updatedCompletedState = !targetTask.completed;
+
+  try {
+    // Send partial update to the backend targeting this specific task
+    const response = await fetch(`/api/tasks/${taskId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ completed: updatedCompletedState })
+    });
+
+    if (!response.ok) throw new Error('Failed to update completion status');
+
+    // Update frontend state instantly
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, completed: updatedCompletedState } : t));
+  } catch (error) {
+    console.error("Error updating task status:", error);
+    // Fallback optimization for local testing
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, completed: updatedCompletedState } : t));
+  }
+};
   // API Call: Universal parameterized retrieval router supporting multiple workspace configurations
   const fetchTasks = async (targetId: string | number, type: string) => {
     try {
@@ -163,6 +190,7 @@ export const useListsState = () => {
           title: "Sync project deliverables and push design templates to staging branch",
           currentProgress: 0,
           totalProgress: 1,
+          completed:false,
           unit: "",
           date: "Jun 15, 2026",
           time: "16:00"
@@ -173,6 +201,7 @@ export const useListsState = () => {
           title: `Review items currently assigned to Team Member #${targetId}`,
           currentProgress: 0.5,
           totalProgress: 1,
+          completed: false,
           unit: "",
           date: "Today",
           time: "Pending"
@@ -214,6 +243,7 @@ export const useListsState = () => {
         title: task.title || newTaskTitle.trim(),
         currentProgress: 0,
         totalProgress: 1,
+        completed: false,
         unit: '',
         date: 'Today',
         time: 'Just now',
@@ -226,7 +256,7 @@ export const useListsState = () => {
     } catch (error) {
       console.error("Creation Error:", error);
       // Local optimistic fallback simulation loop
-      const localTask: Task = { id: Date.now(), title: newTaskTitle.trim(), currentProgress: 0, totalProgress: 1, unit: '', date: 'Today', time: 'Just now' };
+      const localTask: Task = { id: Date.now(), title: newTaskTitle.trim(), currentProgress: 0, totalProgress: 1, completed: false, unit: '', date: 'Today', time: 'Just now' };
       setTasks((prevTasks) => [...prevTasks, localTask]);
       setNewTaskTitle('');
       setSelectedFile(null);
@@ -316,6 +346,6 @@ export const useListsState = () => {
     imageInputRef, selectedFile, setSelectedFile, isRecording, audioBlob, setAudioBlob,
     handleAddTaskList, handleSwitchList, toggleRecording, handleCreateTask, handleSaveTaskEdits,
     viewMode, setViewMode, groupItems, setGroupItems, setActiveContext, isLoadingGroups,
-    handleDeleteTask // Exposed to parent layout execution chain loop
+    handleDeleteTask, handleToggleComplete
   };
 };

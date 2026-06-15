@@ -9,6 +9,12 @@ import { useListsState } from './useListsStates'; // Double check file system na
 const Lists = () => {
   // This puts all useState login in one single constant
   const s = useListsState();
+  // Put this right inside your Lists component, before the return statement:
+const totalTasks = s.tasks.length;
+const completedTasks = s.tasks.filter(task => task.completed).length;
+
+// Calculate percentage safely to avoid dividing by zero
+const listProgressPercentage = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
 
   return (
     <div className="flex min-h-screen bg-[#FDF6EC] font-sans antialiased text-gray-800 overflow-x-hidden">
@@ -28,6 +34,8 @@ const Lists = () => {
         setActiveContext={s.setActiveContext}
         isLoadingGroups={s.isLoadingGroups}
       />
+      {/* Master List Progress Bar UI */}
+
 
       <main className="flex-1 relative flex flex-col items-center px-8 pt-4 pb-12 overflow-hidden transition-all duration-300">
         <div className="absolute right-0 bottom-0 w-80 h-[80%] bg-[#FCECD7] rounded-l-full opacity-70 transform translate-x-10 pointer-events-none z-0" />
@@ -49,6 +57,18 @@ const Lists = () => {
 
         <div className="w-full max-w-2xl flex flex-col items-center text-center z-10 flex-1">
           <h2 className="text-xl font-bold text-gray-900 mt-4 mb-6">{s.activeListName}</h2>
+          <div className="w-full max-w-md mb-6 bg-white border border-gray-200 rounded-2xl p-4 shadow-sm text-left">
+  <div className="flex justify-between items-center text-xs font-semibold text-gray-500 mb-2">
+    <span>List Completion</span>
+    <span>{completedTasks} / {totalTasks} Tasks Done ({Math.round(listProgressPercentage)}%)</span>
+  </div>
+  <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
+    <div 
+      className="bg-emerald-500 h-full transition-all duration-300 ease-in-out"
+      style={{ width: `${listProgressPercentage}%` }}
+    />
+  </div>
+</div>
 
           <div className="w-full space-y-4 mb-12">
             {s.isLoadingTasks ? (
@@ -65,7 +85,8 @@ const Lists = () => {
                   key={task.id} 
                   task={task} 
                   onEditTrigger={s.setEditingTask} 
-                  onDeleteTrigger={s.handleDeleteTask} 
+                  onDeleteTrigger={s.handleDeleteTask}
+                  onToggleComplete={s.handleToggleComplete} 
                 />
               ))
             )}
