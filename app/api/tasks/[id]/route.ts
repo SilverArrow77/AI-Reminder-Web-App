@@ -27,7 +27,10 @@ function getUserIdFromRequest(req: Request) {
   }
 }
 
-export async function GET(req: Request) {
+export async function DELETE(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const userId = getUserIdFromRequest(req)
 
@@ -38,63 +41,45 @@ export async function GET(req: Request) {
       )
     }
 
-    const lists = await prisma.list.findMany({
+    const { id } = await params
+
+    const task = await prisma.task.findUnique({
       where: {
-        userId,
+        id,
       },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    })
-
-    return NextResponse.json(lists)
-  } catch (error) {
-    console.error(error)
-
-    return NextResponse.json(
-      { error: 'Failed to fetch lists' },
-      { status: 500 }
-    )
-  }
-}
-
-export async function POST(req: Request) {
-  try {
-    const userId = getUserIdFromRequest(req)
-
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-
-    const body = await req.json()
-
-    const { name } = body
-
-    if (!name) {
-      return NextResponse.json(
-        { error: 'Name is required' },
-        { status: 400 }
-      )
-    }
-
-    const list = await prisma.list.create({
-      data: {
-        name,
-        userId,
+      include: {
+        list: true,
       },
     })
 
-    return NextResponse.json(list, {
-      status: 201,
+    if (!task) {
+      return NextResponse.json(
+        { error: 'Task not found' },
+        { status: 404 }
+      )
+    }
+
+    if (task.list.userId !== userId) {
+      return NextResponse.json(
+        { error: 'Forbidden' },
+        { status: 403 }
+      )
+    }
+
+    await prisma.task.delete({
+      where: {
+        id,
+      },
+    })
+
+    return NextResponse.json({
+      message: 'Task deleted successfully',
     })
   } catch (error) {
     console.error(error)
 
     return NextResponse.json(
-      { error: 'Failed to create list' },
+      { error: 'Failed to delete task' },
       { status: 500 }
     )
   }

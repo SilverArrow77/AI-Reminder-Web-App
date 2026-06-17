@@ -30,7 +30,7 @@ export default function LoginForm() {
 
       if (response.ok) {
         localStorage.setItem('token', data.token);
-
+        
         router.push('/lists');
         router.refresh();
       } else {

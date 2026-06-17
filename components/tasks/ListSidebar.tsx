@@ -112,7 +112,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <>
-      <aside className={`bg-[#F3F3F4] border-r border-gray-200 flex flex-col justify-between p-4 rounded-r-3xl transition-all duration-300 ease-in-out shrink-0 z-30 ${
+      <aside className={`bg-[#F3F3F4] border-r sticky top-0 h-screen border-gray-200 flex flex-col justify-between p-4 rounded-r-3xl transition-all duration-300 ease-in-out shrink-0 z-30 ${
         isOpen ? 'w-64 opacity-100' : 'w-0 p-0 opacity-0 border-none overflow-hidden'
       }`}>
         <div className={isOpen ? "block" : "hidden"}>
@@ -138,11 +138,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             <input type="text" placeholder="Search" className="w-full bg-white pl-9 pr-4 py-1.5 rounded-lg text-sm border border-gray-200 focus:outline-none" />
           </div>
 
-          {/* VIEW SWITCHER SLIDER CONTROLLER */}
-          <div className="bg-gray-200/60 p-1 rounded-xl flex items-center gap-1 mb-5">
-            <button onClick={() => setViewMode('personal')} className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-semibold rounded-lg transition-all ${viewMode === 'personal' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}><User size={13} /> Personal</button>
-            <button onClick={() => setViewMode('group')} className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-semibold rounded-lg transition-all ${viewMode === 'group' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}><Users size={13} /> Group View</button>
-          </div>
+          
 
           {/* NAVIGATION PORT CONTAINER */}
           <div>

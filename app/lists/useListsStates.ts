@@ -104,18 +104,25 @@ export const useListsState = () => {
   useEffect(() => {
     const fetchAllLists = async () => {
       try {
-        const response = await fetch('/api/lists');
+        const token = localStorage.getItem('token');
+
+        const response = await fetch('/api/lists', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
         const data = await response.json();
-        
+
         if (Array.isArray(data) && data.length > 0) {
           const mappedLists = data.map((list: any, index: number) => ({
             id: list.id,
             label: list.name,
             active: index === 0
           }));
+
           setSidebarItems(mappedLists);
-          
-          // Align the dynamic dashboard focus point to match the first folder
+
           setActiveContext({
             id: data[0].id,
             name: data[0].name,
@@ -123,12 +130,22 @@ export const useListsState = () => {
           });
         } else {
           setSidebarItems([]);
-          setActiveContext({ id: 'empty', name: 'No Lists Found', type: 'personal' });
+          setActiveContext({
+            id: 'empty',
+            name: 'No Lists Found',
+            type: 'personal'
+          });
         }
       } catch (error) {
         console.error("Error fetching user lists:", error);
+
         setSidebarItems([]);
-        setActiveContext({ id: 'error', name: 'Personal Task Lists', type: 'personal' });
+
+        setActiveContext({
+          id: 'error',
+          name: 'Personal Task Lists',
+          type: 'personal'
+        });
       }
     };
 
@@ -168,44 +185,32 @@ export const useListsState = () => {
   }
 };
   // API Call: Universal parameterized retrieval router supporting multiple workspace configurations
-  const fetchTasks = async (targetId: string | number, type: string) => {
+  const fetchTasks = async (
+    targetId: string | number,
+    type: string
+  ) => {
     try {
       setIsLoadingTasks(true);
-      console.log(`FETCHING CONTEXT: ID=${targetId}, TYPE=${type}`);
-      
-      const response = await fetch(`/api/lists/${targetId}?type=${type}`);
+
+      const token = localStorage.getItem('token');
+
+      const response = await fetch(
+        `/api/lists/${targetId}?type=${type}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
       const data = await response.json();
-      
+
       setTasks(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Fetch Tasks Error:", error);
-      
-      // Smart Fallback Local Simulators for debugging
+
       if (type === 'personal') {
         setTasks([]);
-      } else if (type === 'group') {
-        // Injected debug fallback container item so layout isn't blank
-        setTasks([{
-          id: 5001,
-          title: "Sync project deliverables and push design templates to staging branch",
-          currentProgress: 0,
-          totalProgress: 1,
-          completed:false,
-          unit: "",
-          date: "Jun 15, 2026",
-          time: "16:00"
-        }]);
-      } else if (type === 'member') {
-        setTasks([{
-          id: 6001,
-          title: `Review items currently assigned to Team Member #${targetId}`,
-          currentProgress: 0.5,
-          totalProgress: 1,
-          completed: false,
-          unit: "",
-          date: "Today",
-          time: "Pending"
-        }]);
       }
     } finally {
       setIsLoadingTasks(false);
@@ -220,7 +225,7 @@ export const useListsState = () => {
 
     try {
       setIsSubmittingTask(true);
-      
+
       // Utilizing FormData payload to cleanly transfer strings along with binary file nodes
       const formData = new FormData();
       formData.append('title', newTaskTitle.trim());
@@ -269,47 +274,75 @@ export const useListsState = () => {
   // NEW API Call: Task Deletion handler targeting unique identifier route parameter mapping
   const handleDeleteTask = async (taskId: number) => {
     try {
+      const token = localStorage.getItem('token');
+
       const response = await fetch(`/api/tasks/${taskId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
-      
-      if (!response.ok) throw new Error('Server rejected deletion request.');
-      
-      // Safely scrub entry out of frontend layout matrix array instantly
-      setTasks(prev => prev.filter(task => task.id !== taskId));
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Server rejected deletion request.');
+      }
+
+      setTasks(prev =>
+        prev.filter(task => task.id !== taskId)
+      );
     } catch (error) {
       console.error("Backend Task Deletion Error:", error);
-      // Optimistic local fallback action so your component cleans up while testing without backend routes setup
-      setTasks(prev => prev.filter(task => task.id !== taskId));
     }
   };
 
   const handleAddTaskList = async (listName: string) => {
     if (!listName || !listName.trim()) return;
-    
+
     try {
+      const token = localStorage.getItem('token');
+
       const response = await fetch('/api/lists', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: listName.trim() })
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: listName.trim(),
+        }),
       });
+
       const data = await response.json();
-      
-      const newListId = data.id || Date.now();
+
+      if (!response.ok) {
+        throw new Error(data.error);
+      }
+
       setSidebarItems(prev => {
-        const resetItems = prev.map(item => ({ ...item, active: false }));
-        return [...resetItems, { id: newListId, label: listName.trim(), active: true }];
+        const resetItems = prev.map(item => ({
+          ...item,
+          active: false,
+        }));
+
+        return [
+          ...resetItems,
+          {
+            id: data.id,
+            label: data.name,
+            active: true,
+          },
+        ];
       });
-      
-      setActiveContext({ id: newListId, name: listName.trim(), type: 'personal' });
+
+      setActiveContext({
+        id: data.id,
+        name: data.name,
+        type: 'personal',
+      });
     } catch (error) {
-      console.error("Error recording list creation on server:", error);
-      const mockId = Date.now();
-      setSidebarItems(prev => {
-        const resetItems = prev.map(item => ({ ...item, active: false }));
-        return [...resetItems, { id: mockId, label: listName.trim(), active: true }];
-      });
-      setActiveContext({ id: mockId, name: listName.trim(), type: 'personal' });
+      console.error(error);
     }
   };
 
