@@ -6,6 +6,8 @@ import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 
 export default function SignUpForm() {
+  // NEW: Added state tracking for the username field
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [countryData, setCountryData] = useState({ dialCode: '', format: '' });
@@ -15,20 +17,12 @@ export default function SignUpForm() {
   
   const router = useRouter();
 
-  // Simple Frontend Validation helper for Phone Numbers but we need to do backend validation too
   const isPhoneValid = () => {
-    if (!phone) 
-      {
-        return false;
-      }
-  
+    if (!phone) return false;
     const cleanDigits = phone.replace(/\D/g, '');
-    
-    // format parsing should work but just in case it doesn't work
     if (!countryData.format) {
       return cleanDigits.length >= 10;
     }
-    
     const totalExpectedDigits = (countryData.format.match(/\./g) || []).length;
     return cleanDigits.length === totalExpectedDigits;
   };
@@ -36,7 +30,6 @@ export default function SignUpForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Check frontend validation before bothering the network
     if (!isPhoneValid()) {
       alert("Please enter a valid complete phone number.");
       return;
@@ -45,14 +38,14 @@ export default function SignUpForm() {
     setIsLoading(true);
     
     try {
-     // Backend to be written for this particular route
       const response = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
+          name: name.trim(), // NEW: Sent smoothly inside your signup payload package
           email, 
           password, 
-          phone: `+${phone}` // Standardizing with an explicit '+' prefix for the backend
+          phone: `+${phone}`
         }),
       });
 
@@ -60,12 +53,13 @@ export default function SignUpForm() {
 
       if (response.ok) {
         alert("Account created successfully!");
-        // Route straight to the user list workspace after successful registration hook
+        localStorage.setItem('token', data.token);
+    // Save it instantly right here on account creation
+    localStorage.setItem('name', name);
         router.push('/lists');
         router.refresh();
       } else if (response.status === 409 || data.message?.toLowerCase().includes('exist')) {
-        // Explicit check if the account identity collision rules break on backend
-        alert("An account with this email or phone number already exists.");
+        alert("An account with this username, email, or phone number already exists.");
       } else {
         alert(data.message || "Registration failed. Invalid credentials or data format.");
       }
@@ -79,6 +73,24 @@ export default function SignUpForm() {
 
   return (
     <form className="space-y-5" onSubmit={handleSubmit}>
+      
+      {/* NEW: NAME INPUT FIELD BLOCK */}
+      <div>
+        <label htmlFor="username" className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+          Name
+        </label>
+        <input
+          id="name"
+          type="text"
+          required
+          value={name}
+          disabled={isLoading}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="What should we call you?"
+          className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm transition-all duration-200 placeholder-gray-300 focus:outline-none focus:border-orange-400 focus:ring-1 focus:ring-orange-400"
+        />
+      </div>
+
       <div>
         <label htmlFor="email" className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
           Email
@@ -111,8 +123,7 @@ export default function SignUpForm() {
               format: country.format
             });
           }}
-          placeholder="Enter phone number"
-          
+          placeholder="          Enter phone number"
           inputClass="!w-full !h-[42px] !px-4 !py-2.5 !bg-white !border !border-gray-200 !rounded-lg !text-sm !transition-all !duration-200 !placeholder-gray-300 focus:!outline-none focus:!border-orange-400 focus:!ring-1 focus:!ring-orange-400"
           containerClass="!w-full"
           buttonClass="!border-gray-200 !rounded-l-lg !bg-white" 
@@ -154,7 +165,6 @@ export default function SignUpForm() {
         </div>
       </div>
 
-      {/* OAuth Third-Party Sign In . to be implemented*/}
       <div>
         <button
           type="button"
