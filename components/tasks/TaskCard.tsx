@@ -82,6 +82,15 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onEditTrigger, onDeleteTrigge
           }`}>
             {task.title}
           </span>
+          <div className="flex gap-2 text-[11px] font-medium text-gray-700 pl-7">
+        <span className="bg-[#EAEAEA] px-2.5 py-1 rounded-md">{task.date || 'No Date'}</span>
+        <span className="bg-[#EAEAEA] px-2.5 py-1 rounded-md">{task.time || 'No Time'}</span>
+        {task.reminderOffset && (
+          <span className="bg-orange-100 text-orange-700 px-2.5 py-1 rounded-md">
+            Alert: {task.reminderOffset} before
+          </span>
+        )}
+      </div>
         </div>
         
         {/* Action button controls */}
@@ -106,39 +115,10 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onEditTrigger, onDeleteTrigge
         </div>
       </div>
 
-      {/* Progress sub-metrics container */}
-      <div className="flex items-center justify-between text-xs text-gray-600 mb-2 pl-7">
-        <div className="flex items-center gap-1">
-          <Star size={14} className={task.completed ? "text-emerald-500" : "text-gray-700"} />
-          <span>Progress</span>
-        </div>
-        <span>{task.currentProgress} {task.unit} / {task.totalProgress} {task.unit}</span>
-      </div>
-
-      {/* Progress Bar lines shifting to soft green when list elements finish */}
-      <div className="w-full bg-gray-100 h-0.75 rounded-full mb-4 relative ml-7 max-w-[calc(100%-28px)]">
-        <div 
-          className={`h-0.75 rounded-full relative transition-all duration-300 ${
-            task.completed ? 'bg-emerald-500' : 'bg-blue-500'
-          }`} 
-          style={{ width: `${percentage}%` }}
-        >
-          <div className={`absolute right-0 top-[-2.5px] w-2 h-2 rounded-full shadow ${
-            task.completed ? 'bg-emerald-600' : 'bg-blue-600'
-          }`} />
-        </div>
-      </div>
+      
 
       {/* Metadata Badges */}
-      <div className="flex gap-2 text-[11px] font-medium text-gray-700 pl-7">
-        <span className="bg-[#EAEAEA] px-2.5 py-1 rounded-md">{task.date || 'No Date'}</span>
-        <span className="bg-[#EAEAEA] px-2.5 py-1 rounded-md">{task.time || 'No Time'}</span>
-        {task.reminderOffset && (
-          <span className="bg-orange-100 text-orange-700 px-2.5 py-1 rounded-md">
-            Alert: {task.reminderOffset} before
-          </span>
-        )}
-      </div>
+      
     </div>
   );
 };
