@@ -4,128 +4,179 @@ import { Menu, ImageIcon, Mic, FilePlus, X, Loader2, Settings2, Paperclip, Check
 import Sidebar from '@/components/tasks/ListSidebar';
 import TaskCard from '@/components/tasks/TaskCard';
 import AiMenu from '@/components/tasks/AiMenu';
-import { useListsState } from './useListsStates'; // Double check file system naming parameters match
+import { useListsState } from './useListsStates';
+import { useEffect } from 'react';
+import { useState } from 'react';
 
 const Lists = () => {
-  // This puts all useState login in one single constant
   const s = useListsState();
-  // Put this right inside your Lists component, before the return statement:
-const totalTasks = s.tasks.length;
-const completedTasks = s.tasks.filter(task => task.completed).length;
+  
+  const totalTasks = s.tasks.length;
+  const completedTasks = s.tasks.filter(task => task.completed).length;
+  const listProgressPercentage = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
+  const [displayedName, setDisplayedName] = useState('User');
 
-// Calculate percentage safely to avoid dividing by zero
-const listProgressPercentage = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
+  useEffect(() => {
+  const storedName = localStorage.getItem('name');
+  if (storedName) {
+    setDisplayedName(storedName);
+  }
+}, []);
 
   return (
-    <div className="flex min-h-screen bg-[#FDF6EC] font-sans antialiased text-gray-800 overflow-x-hidden">
+    <div className="flex min-h-screen w-full bg-[#FDF6EC] font-sans antialiased text-gray-800 relative">
+      <button
+        onClick={() => s.setIsAiOpen(true)}
+        className="fixed top-6 right-6 z-50 flex items-center gap-1.5 bg-[#F28C38] hover:bg-[#e07b27] text-white px-4 py-2 rounded-xl font-medium shadow-sm text-xs transition whitespace-nowrap"
+      >
+        Get AI Insights
+      </button>
       <input type="file" ref={s.fileInputRef} className="hidden" onChange={(e) => s.setSelectedFile(e.target.files?.[0] || null)} />
       <input type="file" accept="image/*" ref={s.imageInputRef} className="hidden" onChange={(e) => s.setSelectedFile(e.target.files?.[0] || null)} />
 
-      <Sidebar 
-        isOpen={s.isLeftSidebarOpen} 
-        setIsOpen={s.setIsLeftSidebarOpen} 
-        sidebarItems={s.sidebarItems} 
-        onSwitchList={s.handleSwitchList} 
-        onAddList={s.handleAddTaskList} 
-        viewMode={s.viewMode}
-        setViewMode={s.setViewMode}
-        groupItems={s.groupItems}
-        setGroupItems={s.setGroupItems}
-        setActiveContext={s.setActiveContext}
-        isLoadingGroups={s.isLoadingGroups}
-      />
-      {/* Master List Progress Bar UI */}
+      {/* FIXED LEFT SIDEBAR */}
+      <div className={`fixed top-0 left-0 bottom-0 z-30 transition-all duration-300 ease-in-out ${
+        s.isLeftSidebarOpen ? 'w-64' : 'w-0'
+      }`}>
+        <Sidebar 
+          isOpen={s.isLeftSidebarOpen} 
+          setIsOpen={s.setIsLeftSidebarOpen} 
+          sidebarItems={s.sidebarItems} 
+          onSwitchList={s.handleSwitchList} 
+          onAddList={s.handleAddTaskList} 
+          viewMode={s.viewMode}
+          setViewMode={s.setViewMode}
+          groupItems={s.groupItems}
+          setGroupItems={s.setGroupItems}
+          setActiveContext={s.setActiveContext}
+          isLoadingGroups={s.isLoadingGroups}
+        />
+      </div>
 
+      {/* UPDATED MAIN VIEW: Lower left padding + high right padding forces the centered column leftward */}
+      <main className={`flex-1 flex flex-col items-center pt-6 pl-8 pr-24 md:pr-40 transition-all duration-300 w-full pb-40 ${
+        s.isLeftSidebarOpen ? 'ml-64' : 'ml-0'
+      }`}>
+        <div className="absolute right-0 bottom-0 w-80 h-[80%] bg-[#FCECD7] rounded-l-full opacity-40 transform translate-x-10 pointer-events-none z-0" />
 
-      <main className="flex-1 relative flex flex-col items-center px-8 pt-4 pb-12 overflow-hidden transition-all duration-300">
-        <div className="absolute right-0 bottom-0 w-80 h-[80%] bg-[#FCECD7] rounded-l-full opacity-70 transform translate-x-10 pointer-events-none z-0" />
-
-        <div className="w-full self-stretch relative flex items-start justify-center mb-10 z-10">
-          {!s.isLeftSidebarOpen && (
-            <button onClick={() => s.setIsLeftSidebarOpen(true)} className="absolute left-0 top-0 -ml-8 p-2 bg-[#F3F3F4] border border-gray-200 text-gray-700 hover:bg-gray-200 rounded-xl shadow-sm flex items-center justify-center z-20">
-              <Menu size={20} />
-            </button>
-          )}
-          <div className="text-center">
-            <h1 className="text-5xl font-semibold text-gray-900 leading-tight tracking-tight">{s.greeting},<br />Anshul !</h1>
-            <p className="text-gray-500 mt-2 text-sm">{s.currentDate}</p>
+        {/* TOP ROW HEADER BLOCK */}
+        <div className="w-full max-w-2xl flex items-center justify-between mb-8 z-10 relative">
+          {/* Menu Button Side Offset Column */}
+          <div className="w-12 shrink-0 flex justify-start">
+            {!s.isLeftSidebarOpen && (
+              <button onClick={() => s.setIsLeftSidebarOpen(true)} className="p-2 bg-white border border-gray-200 text-gray-700 hover:bg-gray-100 rounded-xl shadow-sm transition">
+                <Menu size={20} />
+              </button>
+            )}
           </div>
-          <div className="absolute right-0 top-0">
-            <button onClick={() => s.setIsAiOpen(true)} className="flex items-center gap-1.5 bg-[#F28C38] hover:bg-[#e07b27] text-white px-5 py-2.5 rounded-xl font-medium shadow-sm text-sm whitespace-nowrap">Get AI Insights</button>
+          
+          {/* Greeting Box */}
+          <div className="text-center flex-1 ml-25">
+            <h1 className="text-4xl font-semibold text-gray-900 leading-tight tracking-tight capitalize">
+              {s.greeting},<br />{displayedName} !
+            </h1>
+            <p className="text-gray-500 mt-1 text-xs">{s.currentDate}</p>
+          </div>
+
+          {/* AI Insights Button (Still mapped to the absolute top-right edge of the row container) */}
+          <div className="w-32 shrink-0 flex justify-end ">
+            
+          </div>
+        
+        </div>
+
+        {/* List Name Header & Progress Tracker Section */}
+        <div className="w-full max-w-2xl mb-6 z-10 text-center">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">{s.activeListName}</h2>
+          
+          <div className="w-full bg-white border border-gray-200 rounded-2xl p-4 shadow-sm text-left">
+            <div className="flex justify-between items-center text-xs font-semibold text-gray-500 mb-2">
+              <span>List Completion Progress</span>
+              <span>{completedTasks} / {totalTasks} Done ({Math.round(listProgressPercentage)}%)</span>
+            </div>
+            <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
+              <div className="bg-emerald-500 h-full transition-all duration-300" style={{ width: `${listProgressPercentage}%` }} />
+            </div>
           </div>
         </div>
 
-        <div className="w-full max-w-2xl flex flex-col items-center text-center z-10 flex-1">
-          <h2 className="text-xl font-bold text-gray-900 mt-4 mb-6">{s.activeListName}</h2>
-          <div className="w-full max-w-md mb-6 bg-white border border-gray-200 rounded-2xl p-4 shadow-sm text-left">
-  <div className="flex justify-between items-center text-xs font-semibold text-gray-500 mb-2">
-    <span>List Completion</span>
-    <span>{completedTasks} / {totalTasks} Tasks Done ({Math.round(listProgressPercentage)}%)</span>
-  </div>
-  <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
-    <div 
-      className="bg-emerald-500 h-full transition-all duration-300 ease-in-out"
-      style={{ width: `${listProgressPercentage}%` }}
-    />
-  </div>
-</div>
+        {/* TASK STREAM CARDS */}
+        <div className="w-full max-w-2xl space-y-4 z-10 text-left">
+          {s.isLoadingTasks ? (
+            <div className="flex flex-col items-center justify-center py-16 text-gray-400 gap-2 w-full">
+              <Loader2 size={24} className="animate-spin text-[#F28C38]" />
+              <span className="text-xs font-medium">Loading tasks...</span>
+            </div>
+          ) : s.tasks.length === 0 ? (
+            <div className="bg-white/50 border border-dashed border-gray-300 rounded-2xl p-12 text-center text-xs text-gray-400 w-full">
+              No tasks listed under this filter index.
+            </div>
+          ) : (
+            s.tasks.map((task) => (
+              <TaskCard 
+                key={task.id} 
+                task={task} 
+                onEditTrigger={s.setEditingTask} 
+                onDeleteTrigger={s.handleDeleteTask}
+                onToggleComplete={s.handleToggleComplete} 
+              />
+            ))
+          )}
+        </div>
 
-          <div className="w-full space-y-4 mb-12">
-            {s.isLoadingTasks ? (
-              <div className="flex items-center justify-center py-12 text-gray-400 gap-2">
-                <Loader2 size={20} className="animate-spin text-[#F28C38]" />
-                <span className="text-sm font-medium">Loading tasks...</span>
-              </div>
-            ) : s.tasks.length === 0 ? (
-              <p className="text-sm text-gray-400 py-12">No tasks in this list yet.</p>
-            ) : (
-              /* CONNECTED: Added onDeleteTrigger to wire the garbage logic down to TaskCard */
-              s.tasks.map((task) => (
-                <TaskCard 
-                  key={task.id} 
-                  task={task} 
-                  onEditTrigger={s.setEditingTask} 
-                  onDeleteTrigger={s.handleDeleteTask}
-                  onToggleComplete={s.handleToggleComplete} 
-                />
-              ))
-            )}
-          </div>
-
-          <div className="w-full mt-auto bg-white border border-gray-200 rounded-2xl p-4 shadow-sm flex flex-col gap-3">
-            <textarea value={s.newTaskTitle} onChange={(e) => s.setNewTaskTitle(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), s.handleCreateTask(e))} placeholder={`Add a new task to ${s.activeListName}...`} rows={2} disabled={s.isSubmittingTask} className="w-full text-sm resize-none focus:outline-none text-gray-700 bg-transparent" />
+        {/* FIXED CHAT-STYLE BOTTOM INPUT PANEL */}
+        <div className={`fixed bottom-0 right-0 p-6 bg-linear-to-t from-[#FDF6EC] via-[#FDF6EC] to-transparent pt-10 z-20 transition-all duration-300 ${
+          s.isLeftSidebarOpen ? 'left-64' : 'left-0'
+        }`}>
+          {/* UPDATED: Added a right margin offset (mr-24 md:mr-40) matching the parent layout to keep it aligned with the tasks */}
+          <div className="w-full max-w-2xl mx-auto mr-24 md:mr-83 ml-auto bg-white border border-gray-200 rounded-2xl p-4 shadow-lg flex flex-col gap-3">
+            <textarea 
+              value={s.newTaskTitle} 
+              onChange={(e) => s.setNewTaskTitle(e.target.value)} 
+              onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), s.handleCreateTask(e))} 
+              placeholder={`Add a new task to ${s.activeListName}...`} 
+              rows={2} 
+              disabled={s.isSubmittingTask} 
+              className="w-full text-sm resize-none focus:outline-none text-gray-700 bg-transparent" 
+            />
             
-            {s.selectedFile && (
-              <div className="flex items-center gap-1.5 text-xs bg-gray-100 self-start px-2 py-1 rounded-md text-gray-600">
-                <Paperclip size={12} /> <span className="truncate max-w-45">{s.selectedFile.name}</span>
-                <button onClick={() => s.setSelectedFile(null)} className="text-gray-400 hover:text-gray-600 ml-1"><X size={12} /></button>
-              </div>
-            )}
-            {s.audioBlob && (
-              <div className="flex items-center gap-1.5 text-xs bg-orange-50 self-start px-2 py-1 rounded-md text-orange-700 border border-orange-200">
-                <Mic size={12} /> <span>Voice Note Ready</span>
-                <button onClick={() => s.setAudioBlob(null)} className="text-gray-400 hover:text-orange-700 ml-1"><X size={12} /></button>
+            {(s.selectedFile || s.audioBlob) && (
+              <div className="flex flex-wrap gap-2 pt-1 border-t border-gray-100 mt-1">
+                {s.selectedFile && (
+                  <div className="flex items-center gap-1.5 text-xs bg-gray-100 px-2 py-1 rounded-md text-gray-600">
+                    <Paperclip size={12} /> <span className="truncate max-w-37.5">{s.selectedFile.name}</span>
+                    <button onClick={() => s.setSelectedFile(null)} className="text-gray-400 hover:text-gray-600 ml-1"><X size={12} /></button>
+                  </div>
+                )}
+                {s.audioBlob && (
+                  <div className="flex items-center gap-1.5 text-xs bg-orange-50 border border-orange-100 px-2 py-1 rounded-md text-orange-700">
+                    <Mic size={12} /> <span>Voice Note Ready</span>
+                    <button onClick={() => s.setAudioBlob(null)} className="text-gray-400 hover:text-orange-700 ml-1"><X size={12} /></button>
+                  </div>
+                )}
               </div>
             )}
 
-            <div className="flex justify-between items-center text-gray-500">
+            <div className="flex justify-between items-center text-gray-400">
               <div className="flex gap-3">
-                <button onClick={() => s.fileInputRef.current?.click()} className="hover:text-gray-800 transition"><FilePlus size={18} /></button>
-                <button onClick={() => s.imageInputRef.current?.click()} className="hover:text-gray-800 transition"><ImageIcon size={18} /></button>
-                <button onClick={s.toggleRecording} className={`transition ${s.isRecording ? 'text-red-500 animate-pulse' : 'hover:text-gray-800'}`}><Mic size={18} /></button>
+                <button onClick={() => s.fileInputRef.current?.click()} className="hover:text-gray-700 transition"><FilePlus size={18} /></button>
+                <button onClick={() => s.imageInputRef.current?.click()} className="hover:text-gray-700 transition"><ImageIcon size={18} /></button>
+                <button onClick={s.toggleRecording} className={`transition ${s.isRecording ? 'text-red-500 animate-pulse' : 'hover:text-gray-700'}`}><Mic size={18} /></button>
               </div>
               <div className="flex items-center gap-2">
                 {s.isSubmittingTask && <Loader2 size={16} className="animate-spin text-gray-400" />}
-                <button onClick={(e) => s.handleCreateTask(e)} disabled={!s.newTaskTitle.trim() || s.isSubmittingTask} className="p-2 bg-gray-100 hover:bg-gray-200 disabled:opacity-50 rounded-full text-gray-600"><ArrowBigRight size={16} /></button>
+                <button onClick={(e) => s.handleCreateTask(e)} disabled={!s.newTaskTitle.trim() || s.isSubmittingTask} className="p-2 bg-gray-100 hover:bg-gray-200 disabled:opacity-50 rounded-full text-gray-600">
+                  <ArrowBigRight size={16} />
+                </button>
               </div>
             </div>
           </div>
         </div>
       </main>
 
-      {/* Task Configuration Modal Aside drawer */}
+      {/* Task Configuration Settings Aside Drawer */}
       {s.editingTask && (
-        <aside className="fixed top-0 right-0 h-full w-85 bg-white border-l border-gray-200 flex flex-col p-6 shadow-2xl z-50">
+        <aside className="fixed top-0 right-0 h-full w-85 bg-white border-l border-gray-200 flex flex-col p-6 shadow-2xl z-50 animate-slide-in">
           <div className="flex items-center justify-between mb-6 border-b border-gray-100 pb-4">
             <span className="font-bold text-gray-800 text-lg flex items-center gap-2"><Settings2 size={18}/> Configure Task</span>
             <button onClick={() => s.setEditingTask(null)} className="p-1 hover:bg-gray-100 rounded-full text-gray-400 hover:text-gray-600"><X size={20} /></button>

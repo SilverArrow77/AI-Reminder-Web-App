@@ -366,10 +366,49 @@ export const useListsState = () => {
     }
   };
 
-  const handleSaveTaskEdits = () => {
+  const handleSaveTaskEdits = async () => {
     if (!editingTask) return;
-    setTasks(prev => prev.map(t => t.id === editingTask.id ? editingTask : t));
-    setEditingTask(null);
+
+    try {
+      // Fire a PATCH request to the unique identifier endpoint for this specific task
+      const response = await fetch(`/api/tasks/${editingTask.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          // If your backend relies on the token we discussed earlier, include this header:
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          title: editingTask.title.trim(),
+          date: editingTask.date,
+          time: editingTask.time,
+          reminderOffset: editingTask.reminderOffset // Passes string values like "5m", "1h", or ""
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Backend failed to persist task modifications.');
+      }
+
+      
+      const updatedTaskFromServer = await response.json();
+
+      setTasks(prev => 
+        prev.map(t => t.id === editingTask.id ? { ...t, ...updatedTaskFromServer } : t)
+      );
+
+      setEditingTask(null);
+      alert('Task configuration updated successfully!');
+
+    } catch (error) {
+      console.error("Error updating task settings on backend:", error);
+      alert('Failed to save task configurations to the server. Applying offline local fallback.');
+
+      // Optimistic fallback so your app stays functional while testing on local environments:
+      setTasks(prev => prev.map(t => t.id === editingTask.id ? editingTask : t));
+      setEditingTask(null);
+    }
   };
 
   return {
