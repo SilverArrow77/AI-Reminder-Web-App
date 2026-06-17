@@ -19,7 +19,20 @@
   }
 }
 
-body {
+html, body {
+  overscroll-behavior-y:contain;
+  
+  /* Prevents horizontal stretching and kills the side scrollbar entirely */
+  overscroll-behavior-x: none;
+  overflow-x: clip;
+  
+  /* Ensures your custom background color fills the raw browser layer */
+  background-color: #FDF6EC; 
+  
+  /* Makes sure the body spans at least the full height of the viewport */
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
