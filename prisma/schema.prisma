@@ -1,45 +1,86 @@
 generator client {
-provider = "prisma-client-js"
+  provider = "prisma-client-js"
 }
 
 datasource db {
-provider = "postgresql"
-url      = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
-id           String   @id @default(cuid())
-email        String   @unique
-phoneNumber  String?
-passwordHash String
+  id           String   @id @default(cuid())
+  email        String   @unique
+  phoneNumber  String?
+  passwordHash String
 
-lists        List[]
+  lists List[]
 
-createdAt    DateTime @default(now())
+  sentRequests     FriendRequest[] @relation("RequestSender")
+  receivedRequests FriendRequest[] @relation("RequestReceiver")
+
+  createdAt DateTime @default(now())
+}
+
+model FriendRequest {
+  id String @id @default(cuid())
+
+  senderId String
+  sender User @relation(
+    "RequestSender",
+    fields: [senderId],
+    references: [id]
+  )
+
+  receiverId String
+  receiver User @relation(
+    "RequestReceiver",
+    fields: [receiverId],
+    references: [id]
+  )
+
+  status FriendRequestStatus @default(PENDING)
+
+  // receiver controls this
+  canAssignTasks Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@unique([senderId, receiverId])
+}
+
+enum FriendRequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
 }
 
 model List {
-id        String   @id @default(cuid())
-name      String
+  id   String @id @default(cuid())
+  name String
 
-userId    String
-user      User     @relation(fields: [userId], references: [id])
+  userId String
+  user   User @relation(fields: [userId], references: [id])
 
-tasks     Task[]
+  tasks Task[]
 
-createdAt DateTime @default(now())
+  createdAt DateTime @default(now())
 }
 
 model Task {
-id          String   @id @default(cuid())
-title       String
-description String?
+  id          String   @id @default(cuid())
+  title       String
+  description String?
 
-completed   Boolean  @default(false)
-dueDate     DateTime?
+  completed Boolean @default(false)
 
-listId      String
-list        List     @relation(fields: [listId], references: [id])
+  dueDate DateTime?
 
-createdAt   DateTime @default(now())
-}
+  listId String
+  list   List @relation(fields: [listId], references: [id])
+
+  // optional - for friend assignment feature
+  assignedToId String?
+  assignedTo   User? @relation(fields: [assignedToId], references: [id])
+
+  createdAt DateTime @default(now())
+} 
