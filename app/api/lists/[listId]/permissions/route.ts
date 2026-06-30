@@ -83,8 +83,15 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { friendId, canAdd, canEdit, canRemove } = body;
+    const { friendId, friendEmail } = body;
     const { listId } = await params;
+
+    if (!friendId && !friendEmail) {
+      return NextResponse.json(
+        { error: 'friendId or friendEmail is required' },
+        { status: 400 }
+      );
+    }
 
     // Verify ownership
     const list = await prisma.list.findUnique({
@@ -98,12 +105,23 @@ export async function POST(
       );
     }
 
+    const friend = friendId
+      ? await prisma.user.findUnique({ where: { id: friendId } })
+      : await prisma.user.findUnique({ where: { email: friendEmail } });
+
+    if (!friend) {
+      return NextResponse.json(
+        { error: 'Friend user not found' },
+        { status: 404 }
+      );
+    }
+
     // Verify friendship
     const friendship = await prisma.friendship.findFirst({
       where: {
         OR: [
-          { user1Id: userId, user2Id: friendId },
-          { user1Id: friendId, user2Id: userId },
+          { user1Id: userId, user2Id: friend.id },
+          { user1Id: friend.id, user2Id: userId },
         ],
       },
     });
@@ -115,48 +133,41 @@ export async function POST(
       );
     }
 
-    // Check if permission already exists
     const existing = await prisma.listPermission.findFirst({
       where: {
         listId,
-        friendId,
+        friendId: friend.id,
       },
     });
 
     if (existing) {
-      // Update existing
-      const updated = await prisma.listPermission.update({
-        where: { id: existing.id },
-        data: {
-          canAdd,
-          canEdit,
-          canRemove,
-        },
-        include: {
+      return NextResponse.json(
+        {
           friend: {
-            select: { id: true, email: true, username: true },
+            id: friend.id,
+            email: friend.email,
+            username: friend.username,
           },
         },
-      });
-      return NextResponse.json(updated);
-    } else {
-      // Create new
-      const created = await prisma.listPermission.create({
-        data: {
-          listId,
-          friendId,
-          canAdd,
-          canEdit,
-          canRemove,
-        },
-        include: {
-          friend: {
-            select: { id: true, email: true, username: true },
-          },
-        },
-      });
-      return NextResponse.json(created, { status: 201 });
+        { status: 200 }
+      );
     }
+
+    const created = await prisma.listPermission.create({
+      data: {
+        listId,
+        friendId: friend.id,
+        canAdd: true,
+        canEdit: false,
+        canRemove: false,
+      },
+      include: {
+        friend: {
+          select: { id: true, email: true, username: true },
+        },
+      },
+    });
+    return NextResponse.json(created, { status: 201 });
   } catch (error) {
     console.error('Error managing permissions:', error);
     return NextResponse.json(
@@ -207,7 +218,7 @@ export async function DELETE(
       },
     });
 
-    return NextResponse.json({ message: 'Permission removed' });
+    return NextResponse.json({ message: 'Collaborator removed' });
   } catch (error) {
     console.error('Error removing permissions:', error);
     return NextResponse.json(

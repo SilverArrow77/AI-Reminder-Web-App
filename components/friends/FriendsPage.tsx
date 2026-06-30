@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Users, UserPlus, X, Check, Minus } from 'lucide-react';
+import { Users, UserPlus, UserX, X, Check, Minus } from 'lucide-react';
 
 interface Friend {
   id: string;
@@ -76,6 +76,7 @@ export default function FriendsPage({ compact = false }: FriendsPageProps) {
       if (res.ok) {
         setSuccess('Friend request sent!');
         setEmail('');
+        fetchFriendsAndRequests();
         setTimeout(() => setSuccess(''), 3000);
       } else {
         const data = await res.json();
@@ -111,6 +112,40 @@ export default function FriendsPage({ compact = false }: FriendsPageProps) {
     }
   }
 
+  async function handleRemoveFriend(friendId: string) {
+    setError('');
+    setSuccess('');
+
+    if (!token) {
+      setError('Authentication required');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/friends', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ friendId }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || 'Failed to remove friend');
+        return;
+      }
+
+      setFriends((current) => current.filter((friend) => friend.id !== friendId));
+      setSuccess('Friend removed successfully');
+    } catch (err) {
+      setError('Error removing friend');
+      console.error(err);
+    }
+  }
+
+
   if (loading) return <div className="p-6 text-center text-sm text-gray-500">Loading your friends...</div>;
 
   return (
@@ -122,11 +157,14 @@ export default function FriendsPage({ compact = false }: FriendsPageProps) {
         </h1>
       )}
 
-      <div className="rounded-2xl border border-[#F2D9B3] bg-white/80 p-5 shadow-sm">
+      <div className="rounded-2xl border border-[#F2D9B3] bg-white/80 px-6 py-5 shadow-sm">
         <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[#8A4B12]">
           <UserPlus className="h-5 w-5 text-[#F28C38]" />
           Add Friend
         </h2>
+        <p className="mb-3 text-sm text-gray-600">
+         
+        </p>
         <form onSubmit={handleSendRequest} className="flex flex-col gap-2 sm:flex-row">
           <input
             type="email"
@@ -140,7 +178,7 @@ export default function FriendsPage({ compact = false }: FriendsPageProps) {
             type="submit"
             className="rounded-xl bg-[#F28C38] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#e07b27]"
           >
-            Send Request
+            Send
           </button>
         </form>
         {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
@@ -154,8 +192,8 @@ export default function FriendsPage({ compact = false }: FriendsPageProps) {
             {requests.map((req) => (
               <div key={req.id} className="animate-bounce-in flex flex-col gap-3 rounded-xl border border-[#F2D9B3] bg-[#FFF8F0] p-3 sm:flex-row sm:items-center sm:justify-between" style={{ willChange: 'transform, opacity' }}>
                 <div>
-                  <p className="font-medium text-gray-800">{req.requestee.username || req.requestee.email}</p>
-                  <p className="text-sm text-gray-600">{req.requestee.email}</p>
+                  <p className="font-medium text-gray-800">{req.requestee.username || 'Unknown'}</p>
+                  <p className="text-sm text-gray-500">{req.requestee.email}</p>
                 </div>
                 <div className="flex gap-2">
                   <button onClick={() => handleRequest(req.id, 'accept')} className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500 text-white transform-gpu hover:scale-105 transition-transform" aria-label="Accept request">
@@ -172,15 +210,30 @@ export default function FriendsPage({ compact = false }: FriendsPageProps) {
       )}
 
       <div className="rounded-2xl border border-[#F2D9B3] bg-white/80 p-5 shadow-sm">
-        <h2 className="mb-4 text-lg font-semibold text-[#8A4B12]">Your Friends ({friends.length})</h2>
+        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="text-lg font-semibold text-[#8A4B12]">Your Friends ({friends.length})</h2>
+          <p className="text-xs text-gray-500"></p>
+        </div>
         {friends.length === 0 ? (
           <p className="text-sm text-gray-600">No friends yet. Send a friend request to get started.</p>
         ) : (
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="flex flex-col gap-3">
             {friends.map((friend) => (
-              <div key={friend.id} className="rounded-xl border border-[#F2D9B3] bg-[#FFF8F0] p-4 transition hover:shadow-sm">
-                <p className="font-semibold text-gray-800">{friend.username || friend.email}</p>
-                <p className="text-sm text-gray-600">{friend.email}</p>
+              <div key={friend.id} className="w-full rounded-xl border border-[#F2D9B3] bg-[#FFF8F0] p-4 transition hover:shadow-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="font-semibold text-gray-800">{friend.username || 'Unknown'}</p>
+                    <p className="text-sm text-gray-500">{friend.email}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveFriend(friend.id)}
+                    className="flex h-9 w-9 items-center justify-center rounded-full bg-rose-500 text-white transition hover:bg-rose-600 p-0 ml-4"
+                    aria-label="Remove friend"
+                  >
+                    <UserX className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
             ))}
           </div>

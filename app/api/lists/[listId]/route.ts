@@ -57,14 +57,24 @@ export async function GET(
       )
     }
 
-    if (list.userId !== userId) {
-      return NextResponse.json(
-        { error: 'Forbidden' },
-        { status: 403 }
-      )
+    const isOwner = list.userId === userId;
+    if (!isOwner) {
+      const collaborator = await prisma.listPermission.findFirst({
+        where: {
+          listId,
+          friendId: userId,
+        },
+      });
+
+      if (!collaborator) {
+        return NextResponse.json(
+          { error: 'Forbidden' },
+          { status: 403 }
+        )
+      }
     }
 
-    await ensureDailyTaskReset(userId, new Date());
+    await ensureDailyTaskReset(list.userId, new Date());
 
     const tasks = await prisma.task.findMany({
       where: {

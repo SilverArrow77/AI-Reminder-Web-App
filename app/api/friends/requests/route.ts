@@ -74,17 +74,55 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create friend request
+    // Prevent duplicate pending requests in either direction
+    const existingRequest = await prisma.friendRequest.findFirst({
+      where: {
+        OR: [
+          { requesterId: userId, receiverId: recipient.id },
+          { requesterId: recipient.id, receiverId: userId },
+        ],
+      },
+    });
+
+    if (existingRequest) {
+      if (existingRequest.status === 'pending') {
+        return NextResponse.json(
+          { error: 'Friend request already pending' },
+          { status: 400 }
+        );
+      }
+      if (existingRequest.status === 'accepted') {
+        const existingFriendship = await prisma.friendship.findFirst({
+          where: {
+            OR: [
+              { user1Id: userId, user2Id: recipient.id },
+              { user1Id: recipient.id, user2Id: userId },
+            ],
+          },
+        });
+
+        if (existingFriendship) {
+          return NextResponse.json(
+            { error: 'Already friends' },
+            { status: 400 }
+          );
+        }
+
+        await prisma.friendRequest.delete({ where: { id: existingRequest.id } });
+      } else if (existingRequest.status === 'rejected') {
+        await prisma.friendRequest.update({
+          where: { id: existingRequest.id },
+          data: { status: 'pending', requesterId: userId, receiverId: recipient.id },
+        });
+        return NextResponse.json({ message: 'Friend request re-sent' }, { status: 201 });
+      }
+    }
+
     const friendRequest = await prisma.friendRequest.create({
       data: {
         requesterId: userId,
         receiverId: recipient.id,
         status: 'pending',
-      },
-      include: {
-        requestee: {
-          select: { id: true, email: true, username: true },
-        },
       },
     });
 

@@ -55,3 +55,58 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const token = authHeader.slice(7);
+    const userId = getUserIdFromToken(token);
+
+    if (!userId) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { friendId } = body;
+
+    if (!friendId) {
+      return NextResponse.json({ error: 'friendId is required' }, { status: 400 });
+    }
+
+    const friendship = await prisma.friendship.findFirst({
+      where: {
+        OR: [
+          { user1Id: userId, user2Id: friendId },
+          { user1Id: friendId, user2Id: userId },
+        ],
+      },
+    });
+
+    if (!friendship) {
+      return NextResponse.json({ error: 'Friendship not found' }, { status: 404 });
+    }
+
+    await prisma.friendship.delete({ where: { id: friendship.id } });
+
+    await prisma.friendRequest.deleteMany({
+      where: {
+        OR: [
+          { requesterId: userId, receiverId: friendId },
+          { requesterId: friendId, receiverId: userId },
+        ],
+      },
+    });
+
+    return NextResponse.json({ message: 'Friend removed' });
+  } catch (error) {
+    console.error('Error removing friend:', error);
+    return NextResponse.json(
+      { error: 'Failed to remove friend' },
+      { status: 500 }
+    );
+  }
+}

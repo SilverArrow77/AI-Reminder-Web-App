@@ -131,15 +131,18 @@ if (!token) {
         if (Array.isArray(data) && data.length > 0) {
           const mappedLists = data.map((list: any, index: number) => ({
             id: list.id,
-            label: list.name,
-            active: index === 0
+            // show a "(Shared)" suffix for collaborator lists so users notice
+            label: `${list.name}${!list.isOwner && list.isCollaborator ? ' (Shared)' : ''}`,
+            active: index === 0,
+            isOwner: list.isOwner,
+            isCollaborator: list.isCollaborator,
           }));
 
           setSidebarItems(mappedLists);
 
           setActiveContext({
             id: data[0].id,
-            name: data[0].name,
+            name: `${data[0].name}${!data[0].isOwner && data[0].isCollaborator ? ' (Shared)' : ''}`,
             type: 'personal'
           });
           // cache for offline/refresh resilience

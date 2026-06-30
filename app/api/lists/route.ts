@@ -40,14 +40,39 @@ export async function GET(req: Request) {
 
     const lists = await prisma.list.findMany({
       where: {
-        userId,
+        OR: [
+          { userId },
+          {
+            listPermissions: {
+              some: {
+                friendId: userId,
+              },
+            },
+          },
+        ],
       },
       orderBy: {
         createdAt: 'desc',
       },
+      include: {
+        listPermissions: {
+          select: { friendId: true },
+        },
+      },
     })
 
-    return NextResponse.json(lists)
+    // Annotate lists so frontend can show "Shared" labels and know ownership
+    const annotated = lists.map((l) => ({
+      id: l.id,
+      name: l.name,
+      userId: l.userId,
+      createdAt: l.createdAt,
+      updatedAt: l.updatedAt,
+      isOwner: l.userId === userId,
+      isCollaborator: (l.listPermissions || []).some((p) => p.friendId === userId),
+    }))
+
+    return NextResponse.json(annotated)
   } catch (error) {
     console.error(error)
 

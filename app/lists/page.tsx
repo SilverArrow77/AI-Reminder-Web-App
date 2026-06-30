@@ -1,10 +1,11 @@
 'use client';
 import React from 'react';
-import { Menu, ImageIcon, Mic, FilePlus, X, Loader2, Settings2, Paperclip, Check, ArrowBigRight, Users} from 'lucide-react';
+import { Menu, ImageIcon, Mic, FilePlus, X, Loader2, Settings2, Paperclip, Check, ArrowBigRight, Users, UserPlus } from 'lucide-react';
 import Sidebar from '@/components/tasks/ListSidebar';
 import TaskCard from '@/components/tasks/TaskCard';
 import AiMenu from '@/components/tasks/AiMenu';
 import FriendsPage from '@/components/friends/FriendsPage';
+import CollaboratorsModal from '@/components/lists/CollaboratorsModal';
 import { useListsState } from './useListsStates';
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
@@ -18,6 +19,7 @@ const Lists = () => {
   const listProgressPercentage = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
   const [displayedName, setDisplayedName] = useState('User');
   const [isFriendsOpen, setIsFriendsOpen] = useState(false);
+  const [isCollaboratorsOpen, setIsCollaboratorsOpen] = useState(false);
   const [authChecked, setAuthChecked] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
@@ -76,6 +78,16 @@ const Lists = () => {
           className="flex items-center gap-1.5 bg-[#F28C38] hover:bg-[#e07b27] text-white px-4 py-2 rounded-xl font-medium shadow-sm text-xs transition whitespace-nowrap"
         >
           Generate Report
+        </button>
+        <button
+          onClick={() => {
+            s.setIsAiOpen(false);
+            setIsCollaboratorsOpen(true);
+          }}
+          disabled={!s.activeListId || s.activeListId === 'empty' || s.activeListId === 'error'}
+          className="flex items-center gap-1.5 border border-[#F2D9B3] bg-white/90 hover:bg-[#FFF3E6] text-[#8A4B12] px-4 py-2 rounded-xl font-medium shadow-sm text-xs transition whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <UserPlus size={14} /> Collaborators
         </button>
         <button
           onClick={() => {
@@ -259,6 +271,14 @@ const Lists = () => {
       )}
 
       <AiMenu isOpen={s.isAiOpen && !s.editingTask} setIsOpen={s.setIsAiOpen} activeListId={s.activeListId} activeListName={s.activeListName} />
+
+      {isCollaboratorsOpen && (
+        <CollaboratorsModal
+          listId={String(s.activeListId)}
+          isOpen={isCollaboratorsOpen}
+          onClose={() => setIsCollaboratorsOpen(false)}
+        />
+      )}
 
       {isFriendsOpen && (
         <aside className="fixed top-0 right-0 h-full w-[28rem] max-w-[92vw] bg-[#FDF6EC] border-l border-[#F2D9B3] shadow-2xl z-50 flex flex-col">
