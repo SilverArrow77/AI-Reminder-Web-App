@@ -1,6 +1,6 @@
 'use client';
 import React from 'react';
-import { Menu, ImageIcon, Mic, FilePlus, X, Loader2, Settings2, Paperclip, Check, ArrowBigRight, Users, UserPlus } from 'lucide-react';
+import { Menu, FilePlus, X, Loader2, Settings2, Paperclip, Check, ArrowBigRight, Users, UserPlus } from 'lucide-react';
 import Sidebar from '@/components/tasks/ListSidebar';
 import TaskCard from '@/components/tasks/TaskCard';
 import AiMenu from '@/components/tasks/AiMenu';
@@ -34,6 +34,24 @@ const Lists = () => {
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const oauthToken = searchParams.get('token');
+    const oauthUsername = searchParams.get('username');
+
+    if (oauthToken) {
+      localStorage.setItem('token', oauthToken);
+      if (oauthUsername) {
+        const normalized = normalizeDisplayName(oauthUsername);
+        if (normalized) {
+          localStorage.setItem('username', normalized);
+          localStorage.setItem('name', normalized);
+          setDisplayedName(normalized);
+        }
+      }
+      router.replace('/lists');
+      return;
+    }
+
     const token = localStorage.getItem('token');
     if (!token) {
       router.replace('/');
@@ -139,7 +157,6 @@ const Lists = () => {
         </button>
       </div>
       <input type="file" ref={s.fileInputRef} className="hidden" onChange={(e) => s.setSelectedFile(e.target.files?.[0] || null)} />
-      <input type="file" accept="image/*" ref={s.imageInputRef} className="hidden" onChange={(e) => s.setSelectedFile(e.target.files?.[0] || null)} />
 
       {/* FIXED LEFT SIDEBAR */}
       <div className={`fixed top-0 left-0 bottom-0 z-30 transition-all duration-300 ease-in-out ${
@@ -252,28 +269,18 @@ const Lists = () => {
               className="w-full text-sm resize-none focus:outline-none text-gray-700 bg-transparent" 
             />
             
-            {(s.selectedFile || s.audioBlob) && (
+            {s.selectedFile && (
               <div className="flex flex-wrap gap-2 pt-1 border-t border-gray-100 mt-1">
-                {s.selectedFile && (
-                  <div className="flex items-center gap-1.5 text-xs bg-gray-100 px-2 py-1 rounded-md text-gray-600">
-                    <Paperclip size={12} /> <span className="truncate max-w-37.5">{s.selectedFile.name}</span>
-                    <button onClick={() => s.setSelectedFile(null)} className="text-gray-400 hover:text-gray-600 ml-1"><X size={12} /></button>
-                  </div>
-                )}
-                {s.audioBlob && (
-                  <div className="flex items-center gap-1.5 text-xs bg-orange-50 border border-orange-100 px-2 py-1 rounded-md text-orange-700">
-                    <Mic size={12} /> <span>Voice Note Ready</span>
-                    <button onClick={() => s.setAudioBlob(null)} className="text-gray-400 hover:text-orange-700 ml-1"><X size={12} /></button>
-                  </div>
-                )}
+                <div className="flex items-center gap-1.5 text-xs bg-gray-100 px-2 py-1 rounded-md text-gray-600">
+                  <Paperclip size={12} /> <span className="truncate max-w-37.5">{s.selectedFile.name}</span>
+                  <button onClick={() => s.setSelectedFile(null)} className="text-gray-400 hover:text-gray-600 ml-1"><X size={12} /></button>
+                </div>
               </div>
             )}
 
             <div className="flex justify-between items-center text-gray-400">
               <div className="flex gap-3">
                 <button onClick={() => s.fileInputRef.current?.click()} className="hover:text-gray-700 transition"><FilePlus size={18} /></button>
-                <button onClick={() => s.imageInputRef.current?.click()} className="hover:text-gray-700 transition"><ImageIcon size={18} /></button>
-                <button onClick={s.toggleRecording} className={`transition ${s.isRecording ? 'text-red-500 animate-pulse' : 'hover:text-gray-700'}`}><Mic size={18} /></button>
               </div>
               <div className="flex items-center gap-2">
                 {s.isSubmittingTask && <Loader2 size={16} className="animate-spin text-gray-400" />}

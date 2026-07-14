@@ -24,6 +24,10 @@ export default function LoginForm() {
   const router = useRouter();
   const toast = useToast();
 
+  const handleGoogleSignIn = () => {
+    window.location.href = '/api/auth/google/start';
+  };
+
   // Animate progress bar
   useEffect(() => {
     if (!showProgress) return;
@@ -179,6 +183,7 @@ export default function LoginForm() {
       <div>
         <button
           type="button"
+          onClick={handleGoogleSignIn}
           className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-white border border-gray-300 hover:border-gray-400 rounded-full text-base font-medium text-black transition-colors duration-150"
         >
           <span>Login with Google</span>

@@ -160,9 +160,16 @@ DATABASE_URL=postgresql://user:password@host:port/database
 
 # Authentication
 JWT_SECRET=your-secret-key-min-32-chars
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+GOOGLE_REDIRECT_URI=http://localhost:3000/api/auth/google/callback
+GOOGLE_OAUTH_SUCCESS_REDIRECT=http://localhost:3000/lists
 
 # AI Reports (Groq API)
 GROQ_API_KEY=your-groq-api-key
+
+# Local environment
+# Copy this file to .env.local when running locally.
 
 # Email Notifications (SMTP)
 SMTP_HOST=smtp.gmail.com

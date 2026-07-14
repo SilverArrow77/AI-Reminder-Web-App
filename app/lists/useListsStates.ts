@@ -72,10 +72,7 @@ export const useListsState = () => {
   const [isSubmittingTask, setIsSubmittingTask] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const imageInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [isRecording, setIsRecording] = useState(false);
-  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
 
   // Set greeting and client clock metadata on mount
   useEffect(() => {
@@ -316,7 +313,6 @@ if (!token) {
       formData.append('category', inferTaskCategory(newTaskTitle.trim()));
 
       if (selectedFile) formData.append('file', selectedFile);
-      if (audioBlob) formData.append('voiceNote', audioBlob, 'voice-note.wav');
 
       const token = localStorage.getItem('token');
 
@@ -363,7 +359,6 @@ if (!token) {
       setTasks((prevTasks) => [...prevTasks, newTask]);
       setNewTaskTitle('');
       setSelectedFile(null);
-      setAudioBlob(null);
     } catch (error) {
       console.error("Creation Error:", error);
       toast.push({ title: 'Create failed', description: 'Unable to create task. Please try again.', type: 'error' });
@@ -535,20 +530,6 @@ if (!token) {
     try { localStorage.setItem(`tasks:${activeListId}`, JSON.stringify(tasks)); } catch {}
   }, [tasks, activeListId]);
 
-  const toggleRecording = async () => {
-    if (isRecording) {
-      setIsRecording(false);
-      setAudioBlob(new Blob(["mock-audio"], { type: 'audio/wav' }));
-    } else {
-      try {
-        await navigator.mediaDevices.getUserMedia({ audio: true });
-        setIsRecording(true);
-      } catch (err) {
-        toast.push({ title: 'Microphone denied', description: 'Microphone access denied.', type: 'error' });
-      }
-    }
-  };
-
   const handleSaveTaskEdits = async () => {
     if (!editingTask) return;
 
@@ -606,8 +587,8 @@ if (!token) {
     greeting, currentDate, isAiOpen, setIsAiOpen, isLeftSidebarOpen, setIsLeftSidebarOpen,
     editingTask, setEditingTask, sidebarItems, activeListId, activeListName, tasks,
     newTaskTitle, setNewTaskTitle, isLoadingTasks, isSubmittingTask, fileInputRef,
-    imageInputRef, selectedFile, setSelectedFile, isRecording, audioBlob, setAudioBlob,
-    handleAddTaskList, handleSwitchList, handleDeleteList, toggleRecording, handleCreateTask, handleSaveTaskEdits,
+    selectedFile, setSelectedFile,
+    handleAddTaskList, handleSwitchList, handleDeleteList, handleCreateTask, handleSaveTaskEdits,
     viewMode, setViewMode, groupItems, setGroupItems, setActiveContext, isLoadingGroups,
     handleDeleteTask, handleToggleComplete
   };

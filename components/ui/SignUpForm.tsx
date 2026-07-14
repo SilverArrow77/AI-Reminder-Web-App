@@ -28,6 +28,10 @@ export default function SignUpForm() {
   const router = useRouter();
   const toast = useToast();
 
+  const handleGoogleSignUp = () => {
+    window.location.href = '/api/auth/google/start';
+  };
+
   const isPhoneValid = () => {
     if (!phone) return false;
     const cleanDigits = phone.replace(/\D/g, '');
@@ -181,6 +185,7 @@ export default function SignUpForm() {
       <div>
         <button
           type="button"
+          onClick={handleGoogleSignUp}
           className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-white border border-gray-300 hover:border-gray-400 rounded-full text-base font-medium text-black transition-colors duration-150"
         >
           <span>Sign Up with Google</span>
