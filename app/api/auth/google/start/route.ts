@@ -5,15 +5,37 @@ const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID
 const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || process.env.GOOGLE_REDIRECT_URL
 const STATE_COOKIE_NAME = 'google_oauth_state'
 
-function resolveRedirectUri(requestUrl: string, configuredUri?: string) {
-  const requestOrigin = new URL(requestUrl).origin
+function resolveBaseUrl(requestUrl: string, headers: Headers) {
+  const forwardedProto = headers.get('x-forwarded-proto')?.split(',')[0]?.trim()
+  const forwardedHost = headers.get('x-forwarded-host')?.split(',')[0]?.trim()
+  const host = headers.get('host')
+
+  if (forwardedProto && (forwardedHost || host)) {
+    return `${forwardedProto}://${forwardedHost || host}`
+  }
+
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`
+  }
+
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    return process.env.NEXT_PUBLIC_APP_URL
+  }
+
+  return new URL(requestUrl).origin
+}
+
+function resolveRedirectUri(requestUrl: string, headers: Headers, configuredUri?: string) {
+  const requestOrigin = resolveBaseUrl(requestUrl, headers)
+  const fallbackUri = `${requestOrigin}/api/auth/google/callback`
+
   if (!configuredUri) {
-    return `${requestOrigin}/api/auth/google/callback`
+    return fallbackUri
   }
 
   try {
     const parsed = new URL(configuredUri)
-    const isMatchingOrigin = parsed.origin === requestOrigin
+    const isMatchingOrigin = parsed.origin === new URL(requestOrigin).origin
     const isCallbackPath = parsed.pathname.replace(/\/+$/, '') === '/api/auth/google/callback'
 
     if (isMatchingOrigin && isCallbackPath) {
@@ -23,7 +45,7 @@ function resolveRedirectUri(requestUrl: string, configuredUri?: string) {
     // fall back to the current request origin
   }
 
-  return `${requestOrigin}/api/auth/google/callback`
+  return fallbackUri
 }
 
 export async function GET(req: Request) {
@@ -34,7 +56,7 @@ export async function GET(req: Request) {
     )
   }
 
-  const redirectUri = resolveRedirectUri(req.url, GOOGLE_REDIRECT_URI)
+  const redirectUri = resolveRedirectUri(req.url, req.headers, GOOGLE_REDIRECT_URI)
 
   const state = randomBytes(16).toString('hex')
   const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth')

@@ -8,15 +8,37 @@ const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || process.env.GOOGL
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key'
 const STATE_COOKIE_NAME = 'google_oauth_state'
 
-function resolveRedirectUri(requestUrl: string, configuredUri?: string) {
-  const requestOrigin = new URL(requestUrl).origin
+function resolveBaseUrl(requestUrl: string, headers: Headers) {
+  const forwardedProto = headers.get('x-forwarded-proto')?.split(',')[0]?.trim()
+  const forwardedHost = headers.get('x-forwarded-host')?.split(',')[0]?.trim()
+  const host = headers.get('host')
+
+  if (forwardedProto && (forwardedHost || host)) {
+    return `${forwardedProto}://${forwardedHost || host}`
+  }
+
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`
+  }
+
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    return process.env.NEXT_PUBLIC_APP_URL
+  }
+
+  return new URL(requestUrl).origin
+}
+
+function resolveRedirectUri(requestUrl: string, headers: Headers, configuredUri?: string) {
+  const requestOrigin = resolveBaseUrl(requestUrl, headers)
+  const fallbackUri = `${requestOrigin}/api/auth/google/callback`
+
   if (!configuredUri) {
-    return `${requestOrigin}/api/auth/google/callback`
+    return fallbackUri
   }
 
   try {
     const parsed = new URL(configuredUri)
-    const isMatchingOrigin = parsed.origin === requestOrigin
+    const isMatchingOrigin = parsed.origin === new URL(requestOrigin).origin
     const isCallbackPath = parsed.pathname.replace(/\/+$/, '') === '/api/auth/google/callback'
 
     if (isMatchingOrigin && isCallbackPath) {
@@ -26,7 +48,29 @@ function resolveRedirectUri(requestUrl: string, configuredUri?: string) {
     // fall back to the current request origin
   }
 
-  return `${requestOrigin}/api/auth/google/callback`
+  return fallbackUri
+}
+
+function resolveAppUrl(requestUrl: string, headers: Headers, configuredUrl?: string, defaultPath = '/lists') {
+  const requestOrigin = resolveBaseUrl(requestUrl, headers)
+  const fallbackUrl = `${requestOrigin}${defaultPath.startsWith('/') ? defaultPath : `/${defaultPath}`}`
+
+  if (!configuredUrl) {
+    return fallbackUrl
+  }
+
+  try {
+    const parsed = new URL(configuredUrl)
+    const isMatchingOrigin = parsed.origin === new URL(requestOrigin).origin
+
+    if (isMatchingOrigin) {
+      return parsed.toString()
+    }
+  } catch {
+    // fall back to the current request origin
+  }
+
+  return fallbackUrl
 }
 
 async function fetchGoogleToken(code: string, redirectUri: string) {
@@ -76,7 +120,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'Invalid OAuth state or missing code' }, { status: 400 })
   }
 
-  const redirectUri = resolveRedirectUri(req.url, GOOGLE_REDIRECT_URI)
+  const redirectUri = resolveRedirectUri(req.url, req.headers, GOOGLE_REDIRECT_URI)
   const tokenResponse = await fetchGoogleToken(code, redirectUri)
 
   if (!tokenResponse.access_token) {
@@ -117,7 +161,8 @@ export async function GET(req: Request) {
     { expiresIn: '7d' }
   )
 
-  const redirectUrl = new URL(process.env.GOOGLE_OAUTH_SUCCESS_REDIRECT || `${url.origin}/lists`)
+  const successRedirectUrl = resolveAppUrl(req.url, req.headers, process.env.GOOGLE_OAUTH_SUCCESS_REDIRECT, '/lists')
+  const redirectUrl = new URL(successRedirectUrl)
   redirectUrl.searchParams.set('token', token)
   redirectUrl.searchParams.set('username', user.username || username)
 
